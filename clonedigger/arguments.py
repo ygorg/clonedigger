@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
 from builtins import *
+
 clustering_threshold = 10
 hashing_depth = 1
 clusterize_using_dcup = False

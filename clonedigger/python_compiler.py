@@ -25,10 +25,13 @@ from .abstract_syntax_tree import *
 class PythonNodeLeaf:
     def __init__(self, val):
         self._val = val
+
     def getVal(self):
         return self._val
+
     def as_string(self):
         return str(self.getVal())
+
     def __str__(self):
         return self.as_string()
 

@@ -27,55 +27,63 @@ from builtins import object
 #   along with Clone Digger.  If not, see <http://www.gnu.org/licenses/>.
 
 
-class SuffixTree(object):    
+class SuffixTree(object):
     class StringPosition(object):
-        def __init__(self, string, position,prevelem):
+        def __init__(self, string, position, prevelem):
             self.string = string
             self.position = position
             self.prevelem = prevelem
+
     class SuffixTreeNode(object):
         def __init__(self):
-            self.childs = {} #
+            self.childs = {}
             self.string_positions = []
             self.ending_strings = []
 
     def __init__(self, f_code):
         self._node = self.SuffixTreeNode()
         self._f_code = f_code
+
     def _add(self, string, prevelem):
         pos = 0
         node = self._node
         for pos in range(len(string)):
             e = string[pos]
             code = self._f_code(e)
-            node.string_positions.append(self.StringPosition(string, pos, prevelem))
+            node.string_positions.append(
+                self.StringPosition(string, pos, prevelem))
             if code not in node.childs:
                 node.childs[code] = self.SuffixTreeNode()
             node = node.childs[code]
-        node.ending_strings.append(self.StringPosition(string, pos+1, prevelem))
+        node.ending_strings.append(
+            self.StringPosition(string, pos + 1, prevelem))
+
     def add(self, string):
         for i in range(len(string)):
             if i == 0:
                 prevelem = None
             else:
-                prevelem = self._f_code(string[i-1])
-            self._add(string[i:],prevelem)
-    def getBestMaxSubstrings(self, threshold, f, f_elem, node = None, initial_threshold=None):  
-        if initial_threshold==None:
+                prevelem = self._f_code(string[i - 1])
+            self._add(string[i:], prevelem)
+
+    def getBestMaxSubstrings(self, threshold, f, f_elem, node=None, initial_threshold=None):
+        if initial_threshold is None:
             initial_threshold = threshold
+
         def check_left_diverse_and_add(s1, s2, p):
-            if ((s1.prevelem == None) or (s2.prevelem == None) or (s1.prevelem != s2.prevelem)) and s1.position>p:
-                candidate = (s1.string[:s1.position-p], s2.string[:s2.position-p])
+            if ((s1.prevelem is None) or (s2.prevelem is None) or (s1.prevelem != s2.prevelem)) and s1.position > p:
+                candidate = (s1.string[:s1.position - p],
+                             s2.string[:s2.position - p])
                 if f_elem(candidate[0]) >= initial_threshold or \
-                    f_elem(candidate[1]) >= initial_threshold:
+                        f_elem(candidate[1]) >= initial_threshold:
                     r.append(candidate)
                 return True
             else:
                 return False
-        if node == None:
+        if node is None:
             node = self._node
-        r = []  
-        if threshold <= 0:          
+        r = []
+        if threshold <= 0:
             for s1 in node.ending_strings:
                 for s2 in node.string_positions:
                     if s1.string == s2.string:
@@ -94,36 +102,45 @@ class SuffixTree(object):
                         for s2 in node.childs[c2].string_positions + node.childs[c2].ending_strings:
                             check_left_diverse_and_add(s1, s2, 1)
         for (code, child) in list(node.childs.items()):
-            r += self.getBestMaxSubstrings(threshold - f(code), f, f_elem, child, initial_threshold)
+            r += self.getBestMaxSubstrings(
+                threshold - f(code), f, f_elem, child, initial_threshold)
         return r
+
 
 if __name__ == '__main__':
     class Elem(object):
         def __init__(self, code):
             self._code = code
+
         def getCode(self):
             return self._code
+
         def __str__(self):
             return str(self._code)
+
     def test1():
         t = SuffixTree()
         for w in ['abcPeter', 'Pet1erbca', 'Peter', 'aPet0--']:
             t.add([Elem(c) for c in w])
-        maxs =  t.getBestMaxSubstrings(3)
-        l =  []
+        maxs = t.getBestMaxSubstrings(3)
+        l = []
         for (s1, s2) in maxs:
-            l.append([''.join([str(e) for e in s1]), ''.join([str(e) for e in s2])])
-        assert(l == [['Pe1t', 'P2et'], ['P3et', 'Pe4t'], ['Pet', 'Pet'], ['Pet', 'Pet'], ['Pet', 'Pet'], ['Peter', 'Peter']])
+            l.append([''.join([str(e) for e in s1]),
+                      ''.join([str(e) for e in s2])])
+        assert l == [['Pe1t', 'P2et'], ['P3et', 'Pe4t'], ['Pet', 'Pet'],
+                     ['Pet', 'Pet'], ['Pet', 'Pet'], ['Peter', 'Peter']]
+
     def test2():
         t = SuffixTree()
         for w in ['a', 'aa']:
             t.add([Elem(c) for c in w])
-        maxs =  t.getBestMaxSubstrings(0)
-        l =  []
-        for (s1, s2) in maxs:       
-            l.append([''.join([str(e) for e in s1]), ''.join([str(e) for e in s2])])
-        assert(l == [['a', 'a'], ['a', 'a'], ['a', 'a']]) 
+        maxs = t.getBestMaxSubstrings(0)
+        l = []
+        for (s1, s2) in maxs:
+            l.append([''.join([str(e) for e in s1]),
+                      ''.join([str(e) for e in s2])])
+        assert l == [['a', 'a'], ['a', 'a'], ['a', 'a']]
+
     for s in dir():
         if s.find('test') == 0:
             eval(s + '()')
-

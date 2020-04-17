@@ -35,43 +35,30 @@ public class TreeProducer
      * forXml function was taken from http://www.javapractices.com/topic/TopicAction.do?Id=96
      * the license is: http://creativecommons.org/licenses/by/3.0/
      */
-    public static String forXML (String aText)
-    {
-	final StringBuilder result = new StringBuilder ();
-	final StringCharacterIterator iterator =
-	    new StringCharacterIterator (aText);
-	char character = iterator.current ();
-	while (character != CharacterIterator.DONE)
-	{
-	    if (character == '<')
-	    {
-		result.append ("&lt;");
-	    }
-	    else if (character == '>')
-	    {
-		result.append ("&gt;");
-	    }
-	    else if (character == '\"')
-	    {
-		result.append ("&quot;");
-	    }
-	    else if (character == '\'')
-	    {
-		result.append ("&#039;");
-	    }
-	    else if (character == '&')
-	    {
-		result.append ("&amp;");
-	    }
-	    else
-	    {
-		//the char is not a special one
-		//        //add it to the result as is
-		result.append (character);
-	    }
-	    character = iterator.next ();
-	}
-	return result.toString ();
+    public static String forXML (String aText) {
+		final StringBuilder result = new StringBuilder ();
+		final StringCharacterIterator iterator =
+		    new StringCharacterIterator (aText);
+		char character = iterator.current ();
+		while (character != CharacterIterator.DONE) {
+		    if (character == '<') {
+				result.append ("&lt;");
+		    } else if (character == '>') {
+				result.append ("&gt;");
+			} else if (character == '\"') {
+				result.append ("&quot;");
+		    } else if (character == '\'') {
+				result.append ("&#039;");
+		    } else if (character == '&') {
+				result.append ("&amp;");
+		    } else {
+				//the char is not a special one
+				//add it to the result as is
+				result.append (character);
+		    }
+		    character = iterator.next ();
+		}
+		return result.toString ();
     }
     //                                      }
 
@@ -97,11 +84,11 @@ public static void main (String[]args) throws Exception
     JavaASTParser parser = new JavaASTParser (tokens);
     MyAstNodeAdaptor adaptor = new MyAstNodeAdaptor ();
     parser.setTreeAdaptor (adaptor);
-    MyAstNode tree = (MyAstNode) parser.compilationUnit ().getTree ();
+    MyAstNode tree = (MyAstNode) parser.compilationUnit().getTree();
     PrintWriter outputStream =
-	new PrintWriter (new FileWriter (args[1], false));
+		new PrintWriter (new FileWriter (args[1], false));
     outputStream.println ("<?xml version=\"1.0\" ?>");
     printTree (tree, outputStream, "");
-    outputStream.close ();
+    outputStream.close();
 }
 }

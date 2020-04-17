@@ -29,6 +29,7 @@ import sys
 from .anti_unification import *
 from .abstract_syntax_tree import *
 
+
 def findDuplicateCode(source_files, report):
     statement_sequences = []
     statement_count = 0
@@ -45,11 +46,11 @@ def findDuplicateCode(source_files, report):
         return []
 
     if verbose:
-        n_sequences = len(sequences_lengths)    
-        avg_seq_length = old_div(sum(sequences_lengths),float(n_sequences))
+        n_sequences = len(sequences_lengths)
+        avg_seq_length = old_div(sum(sequences_lengths), float(n_sequences))
         max_seq_length = max(sequences_lengths)
 
-        print('%d sequences' %(n_sequences,))
+        print('%d sequences' % (n_sequences,))
         print('average sequence length: %f' % (avg_seq_length,))
         print('maximum sequence length: %d' % (max_seq_length,))
         sequences_without_restriction = statement_sequences
@@ -60,20 +61,24 @@ def findDuplicateCode(source_files, report):
                     first_statement = sequence[0]
                     print()
                     print('-----------------------------------------')
-                    print('Warning: sequences of statements, consists of %d elements is too long.' %(len(sequence),))
-                    print('It starts at %s:%d.'%(first_statement.getSourceFile().getFileName(), min(first_statement.getCoveredLineNumbers())))
-                    print('It will be ignored. Use --force to override this restriction.')
-                    print('Please refer to http://clonedigger.sourceforge.net/documentation.html')
-                    print('-----------------------------------------')
+                    print('Warning: sequences of statements, consists of %d elements is too long.' % (
+                        len(sequence),))
+                    print('It starts at %s:%d.' % (
+                        first_statement.getSourceFile().getFileName(),
+                        min(first_statement.getCoveredLineNumbers())))
+                    print(
+                        'It will be ignored. Use --force to override this restriction.\n'
+                        'Please refer to http://clonedigger.sourceforge.net/documentation.html\n'
+                        '-----------------------------------------')
                 else:
                     sequences.append(sequence)
-  
+
     def calc_statement_sizes():
         for sequence in statement_sequences:
             for statement in sequence:
                 statement.storeSize()
 
-    def build_hash_to_statement(dcup_hash = True):
+    def build_hash_to_statement(dcup_hash=True):
         hash_to_statement = {}
         for statement_sequence in statement_sequences:
             for statement in statement_sequence:
@@ -85,8 +90,9 @@ def findDuplicateCode(source_files, report):
                 if h not in hash_to_statement:
                     hash_to_statement[h] = [statement]
                 else:
-                    hash_to_statement[h].append(statement)                  
+                    hash_to_statement[h].append(statement)
         return hash_to_statement
+
     def build_unifiers(hash_to_statement):
         processed_statements_count = 0
         clusters = []
@@ -97,7 +103,7 @@ def findDuplicateCode(source_files, report):
             for statement in statements:
                 processed_statements_count += 1
                 if verbose and ((processed_statements_count % 1000) == 0):
-                    print('%d,' %(processed_statements_count,), end=' ')
+                    print('%d,' % (processed_statements_count,), end=' ')
                     sys.stdout.flush()
                 bestcluster = None
                 mincost = sys.maxsize
@@ -106,16 +112,16 @@ def findDuplicateCode(source_files, report):
                     if cost < mincost:
                         mincost = cost
                         bestcluster = cluster
-                assert(local_clusters==[] or bestcluster)
+                assert(local_clusters == [] or bestcluster)
                 if mincost < 0:
                     pdb.set_trace()
-                assert(mincost >= 0)
-                if bestcluster == None or mincost > arguments.clustering_threshold:
+                assert mincost >= 0
+                if bestcluster is None or mincost > arguments.clustering_threshold:
                     newcluster = Cluster(statement)
                     local_clusters.append(newcluster)
                 else:
-                    bestcluster.unify(statement)                
-            ret[h] = local_clusters 
+                    bestcluster.unify(statement)
+            ret[h] = local_clusters
             clusters.extend(local_clusters)
         return ret
 
@@ -128,7 +134,7 @@ def findDuplicateCode(source_files, report):
             for statement in hash_to_statement[h]:
                 processed_statements_count += 1
                 if verbose and ((processed_statements_count % 1000) == 0):
-                    print('%d,' %(processed_statements_count,), end=' ')
+                    print('%d,' % (processed_statements_count,), end=' ')
                     sys.stdout.flush()
                 mincost = sys.maxsize
                 for cluster in clusters:
@@ -139,77 +145,86 @@ def findDuplicateCode(source_files, report):
                         mincost = cost
                         statement.setMark(cluster)
                         cluster.addWithoutUnification(statement)
+
     def filterOutLongEquallyLabeledSequences(statement_sequences):
-        #TODO - refactor, combine with the previous warning
+        # TODO - refactor, combine with the previous warning
         sequences_without_restriction = statement_sequences
         statement_sequences = []
         for sequence in sequences_without_restriction:
-            new_sequence = copy.copy(sequence._sequence) 
+            new_sequence = copy.copy(sequence._sequence)
             current_mark = None
             length = 0
             first_statement_index = None
-            flag = False 
+            flag = False
             for i in range(len(sequence)):
                 statement = sequence[i]
                 if statement.getMark() != current_mark:
-                    if flag == True:
-                        flag = False 
-                    current_mark=statement.getMark()
-                    length=0
+                    if flag is True:
+                        flag = False
+                    current_mark = statement.getMark()
+                    length = 0
                     first_statement_index = i
                 else:
                     length += 1
-                    if length>10:
+                    if length > 10:
                         new_sequence[i] = None
                         if not flag:
                             for i in range(first_statement_index, i):
                                 new_sequence[i] = None
-                            first_statement = sequence[first_statement_index]                        
+                            first_statement = sequence[first_statement_index]
                             print()
                             print('-----------------------------------------')
-                            print('Warning: sequence of statements starting at %s:%d'%(first_statement.getSourceFile().getFileName(), min(first_statement.getCoveredLineNumbers())))
+                            print('Warning: sequence of statements starting at %s:%d' % (
+                                first_statement.getSourceFile().getFileName(), min(first_statement.getCoveredLineNumbers())))
                             print('consists of many similar statements.')
-                            print('It will be ignored. Use --force to override this restriction.')
-                            print('Please refer to http://clonedigger.sourceforge.net/documentation.html')
+                            print(
+                                'It will be ignored. Use --force to override this restriction.')
+                            print(
+                                'Please refer to http://clonedigger.sourceforge.net/documentation.html')
                             print('-----------------------------------------')
-                            flag = True 
+                            flag = True
             new_sequence = new_sequence + [None]
-            cur_sequence = StatementSequence() 
+            cur_sequence = StatementSequence()
             for statement in new_sequence:
-                if statement == None:
+                if statement is None:
                     if cur_sequence:
                         statement_sequences.append(cur_sequence)
-                        cur_sequence = StatementSequence() 
+                        cur_sequence = StatementSequence()
                 else:
                     cur_sequence.addStatement(statement)
         return statement_sequences
 
-    def mark_using_hash(hash_to_statement):     
+    def mark_using_hash(hash_to_statement):
         for h in hash_to_statement:
             cluster = Cluster()
             for statement in hash_to_statement[h]:
                 cluster.addWithoutUnification(statement)
-                statement.setMark(cluster)              
+                statement.setMark(cluster)
+
     def findHugeSequences():
-        def f_size(x):    
+        def f_size(x):
             return x.getMaxCoveredLines()
+
         def f_elem(x):
             return StatementSequence(x).getCoveredLineNumbersCount()
+
         def fcode(x):
             return x.getMark()
         f = f_size
         suffix_tree_instance = suffix_tree.SuffixTree(fcode)
         for sequence in statement_sequences:
             suffix_tree_instance.add(sequence)
-        return [PairSequences([StatementSequence(s1), StatementSequence(s2)]) for (s1,s2) in suffix_tree_instance.getBestMaxSubstrings(arguments.size_threshold, f, f_elem)]
+        return [PairSequences([StatementSequence(s1), StatementSequence(s2)]) for (s1, s2) in suffix_tree_instance.getBestMaxSubstrings(arguments.size_threshold, f, f_elem)]
+
     def refineDuplicates(pairs_sequences):
         r = []
         flag = False
-        while pairs_sequences:      
+        while pairs_sequences:
             pair_sequences = pairs_sequences.pop()
+
             def all_pairsubsequences_size_n_threshold(n):
                 lr = []
-                for first in range(0, pair_sequences.getLength()-n+1):
+                for first in range(0, pair_sequences.getLength() - n + 1):
                     new_pair_sequences = pair_sequences.subSequence(first, n)
                     size = new_pair_sequences.getMaxCoveredLineNumbersCount()
                     if size >= arguments.size_threshold:
@@ -217,25 +232,28 @@ def findDuplicateCode(source_files, report):
                 return lr
             n = pair_sequences.getLength() + 1
             while 1:
-                n-=1
+                n -= 1
                 if n == 0:
                     break
                 new_pairs_sequences = all_pairsubsequences_size_n_threshold(n)
-                for (candidate_sequence, first) in new_pairs_sequences:             
+                for (candidate_sequence, first) in new_pairs_sequences:
                     distance = candidate_sequence.calcDistance()
                     if (distance < arguments.distance_threshold):
                         r.append(candidate_sequence)
                         if first > 0:
-                            pairs_sequences.append(pair_sequences.subSequence(0, first-1))
-                        if first+n < pair_sequences.getLength():
-                            pairs_sequences.append(pair_sequences.subSequence(first+n, pair_sequences.getLength() - first - n))
-                        n+=1
+                            pairs_sequences.append(
+                                pair_sequences.subSequence(0, first - 1))
+                        if first + n < pair_sequences.getLength():
+                            pairs_sequences.append(pair_sequences.subSequence(
+                                first + n, pair_sequences.getLength() - first - n))
+                        n += 1
                         flag = True
                         break
                 if flag:
                     flag = False
                     break
         return r
+
     def remove_dominated_clones(clones):
         ret_clones = []
 #       def f_cmp(a, b):
@@ -275,7 +293,7 @@ def findDuplicateCode(source_files, report):
         print('Number of statements: ', statement_count)
         print('Calculating size for each statement...', end=' ')
         sys.stdout.flush()
-    calc_statement_sizes() 
+    calc_statement_sizes()
     if verbose:
         print('done')
 
@@ -284,14 +302,14 @@ def findDuplicateCode(source_files, report):
         sys.stdout.flush()
     report.startTimer('Building statement hash')
     if arguments.clusterize_using_hash:
-        hash_to_statement = build_hash_to_statement(dcup_hash = False)
+        hash_to_statement = build_hash_to_statement(dcup_hash=False)
     else:
-        hash_to_statement = build_hash_to_statement(dcup_hash = True)
+        hash_to_statement = build_hash_to_statement(dcup_hash=True)
     report.stopTimer()
     if verbose:
         print('done')
         print('Number of different hash values: ', len(hash_to_statement))
-    
+
     if arguments.clusterize_using_dcup or arguments.clusterize_using_hash:
         print('Marking each statement with its hash value')
         mark_using_hash(hash_to_statement)
@@ -300,7 +318,7 @@ def findDuplicateCode(source_files, report):
             print('Building patterns...', end=' ')
             sys.stdout.flush()
         report.startTimer('Building patterns')
-        clusters_map = build_unifiers(hash_to_statement)    
+        clusters_map = build_unifiers(hash_to_statement)
         report.stopTimer()
         if verbose:
             print(Cluster.count, 'patterns were discovered')
@@ -330,9 +348,10 @@ def findDuplicateCode(source_files, report):
     if verbose:
         print('Finding similar sequences of statements...', end=' ')
         sys.stdout.flush()
-    
+
     if not arguments.force:
-        statement_sequences = filterOutLongEquallyLabeledSequences(statement_sequences)
+        statement_sequences = filterOutLongEquallyLabeledSequences(
+            statement_sequences)
 
     report.startTimer('Finding similar sequences of statements')
     duplicate_candidates = findHugeSequences()
@@ -340,8 +359,8 @@ def findDuplicateCode(source_files, report):
     if verbose:
         print(len(duplicate_candidates), ' sequences were found')
         print('Refining candidates...', end=' ')
-        sys.stdout.flush()    
-    if arguments.distance_threshold!=-1:
+        sys.stdout.flush()
+    if arguments.distance_threshold != -1:
         report.startTimer('Refining candidates')
         clones = refineDuplicates(duplicate_candidates)
         report.stopTimer()
@@ -349,22 +368,22 @@ def findDuplicateCode(source_files, report):
         clones = duplicate_candidates
     if verbose:
         print(len(clones), 'clones were found')
-    if arguments.distance_threshold!=-1:
+    if arguments.distance_threshold != -1:
         if verbose:
             print('Removing dominated clones...', end=' ')
             sys.stdout.flush()
         old_clone_count = len(clones)
         clones = remove_dominated_clones(clones)
         if verbose:
-            print(len(clones) - old_clone_count, 'clones were removed') 
+            print(len(clones) - old_clone_count, 'clones were removed')
 
-    ## get covered source lines for all detected clones (set of all)
+    # get covered source lines for all detected clones (set of all)
     covered_source_lines = set()
     for clone in clones:
         for sequence in clone:
             covered_source_lines |= sequence.getLineNumberHashables()
 
-    ## get source lines for all files/sequences (set of all)
+    # get source lines for all files/sequences (set of all)
     source_lines = set()
     for sequence in statement_sequences:
         source_lines |= sequence.getLineNumberHashables()
