@@ -75,7 +75,7 @@ The semantics of threshold options is discussed in the paper "Duplicate code det
 using anti-unification", which can be downloaded from the site http://clonedigger.sourceforge.net .
 All arguments are optional. Supported options are:
 """)
-    cmdline.add_option('-l', '--language', dest='language',
+    cmdline.add_option('-l', '--language', dest='language', default='python',
                        type='choice', choices=['python', 'java', 'lua', 'javascript', 'js'],
                        help='the programming language')
     cmdline.add_option('--no-recursion', dest='no_recursion',
@@ -84,13 +84,13 @@ All arguments are optional. Supported options are:
     cmdline.add_option('-o', '--output', dest='output',
                        help='the name of the output file ("output.html" by default)')
     cmdline.add_option('--clustering-threshold',
-                       type='int', dest='clustering_threshold',
+                       type='int', dest='clustering_threshold', default=10,
                        help='read the paper for semantics')
     cmdline.add_option('--distance-threshold',
                        type='int', dest='distance_threshold',
                        help='the maximum amount of differences between pair of sequences in clone pair (5 by default). Larger value leads to larger amount of false positives')
     cmdline.add_option('--hashing-depth',
-                       type='int', dest='hashing_depth',
+                       type='int', dest='hashing_depth', default=1,
                        help='default value if 1, read the paper for semantics. Computation can be speeded up by increasing this value (but some clones can be missed)')
     cmdline.add_option('--size-threshold',
                        type='int', dest='size_threshold',
@@ -111,7 +111,7 @@ All arguments are optional. Supported options are:
                        action='store_true', dest='clusterize_using_hash',
                        help='find only clones, which differ in variable and function names and constants')
     cmdline.add_option('--ignore-dir',
-                       action='append', dest='ignore_dirs',
+                       action='append', dest='ignore_dirs', default=[],
                        help='exclude directories from parsing')
     cmdline.add_option('--eclipse-output',
                        dest='eclipse_output',
@@ -123,20 +123,18 @@ All arguments are optional. Supported options are:
                        action='store_true', dest='report_unifiers',
                        help='')
     cmdline.add_option('--func-prefixes',
-                       action='store',
-                       dest='f_prefixes',
+                       action='store', dest='f_prefixes', default='',
                        help='skip functions/methods with these prefixes (provide a CSV string as argument)')
     cmdline.add_option('--file-list', dest='file_list',
                        help='a file that contains a list of file names that must be processed by Clone Digger')
-
-    cmdline.set_defaults(language='python',
-                         ingore_dirs=[],
-                         f_prefixes=None,
-                         **arguments.__dict__)
     return cmdline.parse_args()
 
 
 def main():
+    ##
+    # Deal with CLI arguments
+    ##
+
     (options, source_file_names) = cli_arguments()
 
     if options.f_prefixes is not None:
@@ -144,11 +142,17 @@ def main():
     else:
         func_prefixes = ()
 
-    supplier = ast_suppliers.abstract_syntax_tree_suppliers[options.language]
     if options.language != 'python':
         options.use_diff = True
 
+    supplier = ast_suppliers.abstract_syntax_tree_suppliers[options.language]
+    if not options.size_threshold:
+        options.size_threshold = supplier.size_threshold
+    if not options.distance_threshold:
+        options.distance_threshold = supplier.size_threshold
+
     if options.cpd_output:
+        # Kept here to specify the extension
         if options.output is None:
             options.output = 'output.xml'
         report = reports.CPDXMLReport()
@@ -159,20 +163,25 @@ def main():
 
     output_file_name = options.output
 
-    # Globally needed options (gathered by inspecting every files)
-    if options.size_threshold:
-        setattr(arguments, 'size_threshold', options.size_threshold)
-    if options.distance_threshold:
-        setattr(arguments, 'distance_threshold', options.distance_threshold)
+    # Fill `arguments` from `options` (the variables are hard coded, they
+    #  were retrieved by looking at what variable from `options` were used)
+    setattr(arguments, 'clustering_threshold', options.clustering_threshold)
+    setattr(arguments, 'clusterize_using_dcup', options.clusterize_using_dcup)
+    setattr(arguments, 'clusterize_using_hash', options.clusterize_using_hash)
+    setattr(arguments, 'hashing_depth', options.hashing_depth)
+    setattr(arguments, 'force', options.force)
+    setattr(arguments, 'use_diff', options.use_diff)
+    setattr(arguments, 'print_time', options.print_time)
+    setattr(arguments, 'report_unifiers', options.report_unifiers)
     setattr(arguments, 'eclipse_output', options.eclipse_output)
+    setattr(arguments, 'size_threshold', options.size_threshold)
+    setattr(arguments, 'distance_threshold', options.distance_threshold)
 
-    if options.size_threshold is None:
-        arguments.size_threshold = supplier.size_threshold
-    if options.distance_threshold is None:
-        arguments.distance_threshold = supplier.distance_threshold
+    ##
+    # Deal with files
+    ##
 
-    if options.ignore_dirs is None:
-        options.ignore_dirs = []
+    # source_file_names is a list of files provided in the CLI
 
     # Add files from `file_list` to files to process
     if options.file_list is not None:
@@ -205,6 +214,10 @@ def main():
 
     source_file_names = extended_source_file_names
 
+    ##
+    # Parse files
+    ##
+
     source_files = []  # Contains parsed files
 
     report.startTimer('Construction of AST')
@@ -216,7 +229,15 @@ def main():
 
     report.stopTimer()
 
+    ##
+    # Detect Clones
+    ##
+
     duplicates = clone_detection_algorithm.findDuplicateCode(source_files, report)
+
+    ##
+    # Create report
+    ##
 
     for duplicate in duplicates:
         report.addClone(duplicate)
