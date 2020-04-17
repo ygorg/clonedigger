@@ -29,12 +29,10 @@ abstract_syntax_tree_suppliers = {}
 from . import python_compiler
 abstract_syntax_tree_suppliers['python'] = python_compiler.PythonCompilerSourceFile
 
-from . import java_antlr
-abstract_syntax_tree_suppliers['java'] = java_antlr.JavaANTLRSourceFile
+from . import antlr_sourcefile
+abstract_syntax_tree_suppliers['java'] = antlr_sourcefile.JavaANTLRSourceFile
 
-from . import lua_antlr
-abstract_syntax_tree_suppliers['lua'] = lua_antlr.LuaANTLRSourceFile
+abstract_syntax_tree_suppliers['lua'] = antlr_sourcefile.LuaANTLRSourceFile
 
-from . import js_antlr
-abstract_syntax_tree_suppliers['javascript'] = js_antlr.JsANTLRSourceFile
-abstract_syntax_tree_suppliers['js'] = js_antlr.JsANTLRSourceFile
+abstract_syntax_tree_suppliers['javascript'] = antlr_sourcefile.JsANTLRSourceFile
+abstract_syntax_tree_suppliers['js'] = antlr_sourcefile.JsANTLRSourceFile
