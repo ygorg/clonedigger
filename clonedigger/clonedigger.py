@@ -25,21 +25,41 @@ standard_library.install_aliases()
 from builtins import *
 import sys
 
-if __name__ == '__main__':
-    sys.modules['clonedigger.logilab'] = __import__('logilab')
+"""if __name__ == '__main__':
+    sys.modules['clonedigger.logilab'] = __import__('logilab')"""
 
-import re
 import os
 import traceback
 from optparse import OptionParser
-from fnmatch import fnmatch
 
 from . import ast_suppliers
 from . import clone_detection_algorithm
 from . import arguments
-from . import html_report
+from . import reports
 
-def main():
+
+def parse_file(file_name, func_prefixes, report, options, supplier):
+    source_file = None
+    try:
+        print('Parsing ', file_name, '...', end=' ')
+        sys.stdout.flush()
+        if options.language == 'python':
+            source_file = supplier(file_name, func_prefixes)
+        else:
+            # TODO implement func_prefixes for java also
+            source_file = supplier(file_name)
+        source_file.getTree().propagateCoveredLineNumbers()
+        source_file.getTree().propagateHeight()
+        report.addFileName(file_name)
+        print('done')
+    except:
+        s = 'Error: can\'t parse "%s" \n: ' % (file_name,) + traceback.format_exc()
+        report.addErrorInformation(s)
+        print(s)
+    return source_file
+
+
+def cli_arguments():
     cmdline = OptionParser(usage="""To run Clone Digger type:
 python clonedigger.py [OPTION]... [SOURCE FILE OR DIRECTORY]...
 
@@ -113,13 +133,16 @@ All arguments are optional. Supported options are:
                          ingore_dirs=[],
                          f_prefixes=None,
                          **arguments.__dict__)
+    return cmdline.parse_args()
 
-    (options, source_file_names) = cmdline.parse_args()
-    if options.f_prefixes != None:
-       func_prefixes = tuple([x.strip() for x in options.f_prefixes.split(',')])
+
+def main():
+    (options, source_file_names) = cli_arguments()
+
+    if options.f_prefixes is not None:
+        func_prefixes = tuple([x.strip() for x in options.f_prefixes.split(',')])
     else:
-       func_prefixes = ()
-    source_files = [] 
+        func_prefixes = ()
 
     supplier = ast_suppliers.abstract_syntax_tree_suppliers[options.language]
     if options.language != 'python':
@@ -127,73 +150,70 @@ All arguments are optional. Supported options are:
 
     if options.cpd_output:
         if options.output is None:
-	    options.output = 'output.xml'
-	report = html_report.CPDXMLReport()
+            options.output = 'output.xml'
+        report = reports.CPDXMLReport()
     else:
-    	report = html_report.HTMLReport()    
-
-    if options.output is None:
-    	options.output = 'output.html'
+        if options.output is None:
+            options.output = 'output.html'
+        report = reports.HTMLReport()
 
     output_file_name = options.output
 
-    for option in cmdline.option_list:
-        if option.dest == 'file_list' and options.file_list != None:           
-            source_file_names.extend(open(options.file_list).read().split())
-            continue
-        elif option.dest is None:
-            continue
-        setattr(arguments, option.dest, getattr(options, option.dest))
+    # Globally needed options (gathered by inspecting every files)
+    if options.size_threshold:
+        setattr(arguments, 'size_threshold', options.size_threshold)
+    if options.distance_threshold:
+        setattr(arguments, 'distance_threshold', options.distance_threshold)
+    setattr(arguments, 'eclipse_output', options.eclipse_output)
 
-    if options.distance_threshold is None:
-        arguments.distance_threshold = supplier.distance_threshold
     if options.size_threshold is None:
         arguments.size_threshold = supplier.size_threshold
-    
+    if options.distance_threshold is None:
+        arguments.distance_threshold = supplier.distance_threshold
+
+    if options.ignore_dirs is None:
+        options.ignore_dirs = []
+
+    # Add files from `file_list` to files to process
+    if options.file_list is not None:
+        with open(options.file_list) as f:
+            source_file_names.extend(f.read().split())
+
+    # Search for directories in source_file_name
+    extended_source_file_names = []  # Copy source_file_names
+    for file_name in source_file_names:
+        # Add files from original `source_file_names`
+        if not os.path.isdir(file_name):
+            if os.path.splitext(file_name)[1][1:] == supplier.extension:
+                extended_source_file_names.append(file_name)
+            continue
+        dir_name = file_name
+        # Add files from `dir_name` if not ignored
+        if options.no_recursion:
+            if dir_name in options.ignore_dirs:
+                continue
+            files = [os.path.join(dir_name, f) for f in os.listdir(dir_name)]
+            files = [f for f in files if os.path.splitext(f)[1][1:] == supplier.extension]
+            extended_source_file_names.extend(files)
+        else:
+            for walked_dir_name, _, filenames in os.walk(dir_name):
+                if walked_dir_name in options.ignore_dirs:
+                    continue
+                files = [os.path.join(walked_dir_name, f) for f in filenames]
+                files = [f for f in files if os.path.splitext(f)[1][1:] == supplier.extension]
+                extended_source_file_names.extend(files)
+
+    source_file_names = extended_source_file_names
+
+    source_files = []  # Contains parsed files
+
     report.startTimer('Construction of AST')
 
-    def parse_file(file_name, func_prefixes):
-        try:
-            print('Parsing ', file_name, '...', end=' ')
-            sys.stdout.flush()
-            if options.language=='python':
-                source_file = supplier(file_name, func_prefixes)
-            else:
-                # TODO implement func_prefixes for java also
-                source_file = supplier(file_name)
-            source_file.getTree().propagateCoveredLineNumbers()
-            source_file.getTree().propagateHeight()
-            source_files.append(source_file)
-            report.addFileName(file_name)                
-            print('done')
-        except:
-            s = 'Error: can\'t parse "%s" \n: '%(file_name,) + traceback.format_exc()
-            report.addErrorInformation(s)
-            print(s)
-
-    def walk(dirname):
-        for dirpath, dirs, files in os.walk(file_name):
-            dirs[:] = (not options.ignore_dirs and dirs)  or [d for d in dirs if d not in options.ignore_dirs]
-            # Skip all non-parseable files
-            files[:] = [f for f in files 
-                        if os.path.splitext(f)[1][1:] == supplier.extension]
-            yield (dirpath, dirs, files)
-
     for file_name in source_file_names:
-        if os.path.isdir(file_name):
-            if arguments.no_recursion:
-                dirpath = file_name
-                files = [os.path.join(file_name, f) for f in os.listdir(file_name) 
-                        if os.path.splitext(f)[1][1:] == supplier.extension]
-                for f in files:
-                    parse_file(f, func_prefixes)
-            else:
-                for dirpath, dirnames, filenames in walk(file_name):
-                    for f in filenames:
-                        parse_file(os.path.join(dirpath, f), func_prefixes)
-        else:
-            parse_file(file_name, func_prefixes)
-        
+        source_file = parse_file(file_name, func_prefixes, report, options, supplier)
+        if source_file:
+            source_files.append(source_file)
+
     report.stopTimer()
 
     duplicates = clone_detection_algorithm.findDuplicateCode(source_files, report)
