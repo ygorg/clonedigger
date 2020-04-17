@@ -39,23 +39,24 @@ class ParseError(object):
     def __str__(self):
         return self._descr
 
+
+def filter_func(s):
+    for i in range(len(s) - 1, -2, -1):
+        if i < 0 or not s[i].isspace():
+            break
+    if i >= 0:
+        return s[:i + 1]
+    else:
+        return s
+
+
 class SourceFile(object):
     size_threshold = 5
     distance_threshold = 5
 
     def __init__(self, file_name):
-        f = open(file_name, 'r')
-
-        def filter_func(s):
-            for i in range(len(s) - 1, -2, -1):
-                if i < 0 or not s[i].isspace():
-                    break
-            if i >= 0:
-                return s[:i + 1]
-            else:
-                return s
-        self._source_lines = [filter_func(s) for s in f.readlines()]
-        f.close()
+        with open(file_name, 'r') as f:
+            self._source_lines = [filter_func(s) for s in f]
         self._file_name = file_name
 
     def getSourceLine(self, n):
