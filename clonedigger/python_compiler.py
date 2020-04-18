@@ -37,6 +37,13 @@ class PythonNodeLeaf:
 
 
 def flatten(lst):
+    """Recursively flatten a list
+
+    :param lst: An iterable which can contain other iterables
+    :type lst: iterable
+    :returns: A flattened list without iterables
+    :rtype: {List}
+    """
     l = []
     for elt in lst:
         t = type(elt)

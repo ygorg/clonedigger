@@ -25,19 +25,10 @@ from builtins import object
 #   You should have received a copy of the GNU General Public License
 #   along with Clone Digger.  If not, see <http://www.gnu.org/licenses/>.
 
-import types
-
 from . import arguments
 
+# TODO: What is this ?
 free_variable_cost = 0.5
-
-
-class ParseError(object):
-    def __init__(self, descr):
-        self._descr = descr
-
-    def __str__(self):
-        return self._descr
 
 
 def filter_func(s):
@@ -58,6 +49,7 @@ class SourceFile(object):
         with open(file_name, 'r') as f:
             self._source_lines = [filter_func(s) for s in f]
         self._file_name = file_name
+        self._tree = None  # AbstractSyntaxTree
 
     def getSourceLine(self, n):
         # if n >= len(self._source_lines):
@@ -77,31 +69,46 @@ class SourceFile(object):
 
 
 class AbstractSyntaxTree(object):
+    """Tree structure representing code.
+
+    From (Bulychev et al., 2008): II. A.
+    Strictly speaking, the abstract syntax trees we use are not always trees, since
+    leaves containing the same variable references may be merged, [...].
+    """
     def __init__(self, name=None, line_numbers=[], source_file=None):
-        self._childs = []
         self._line_numbers = line_numbers
-        self._covered_line_numbers = None
-        self._parent = None
-        self._hash = None
-        self._source_file = source_file
-        self._is_statement = False
-        if name is not None:
-            self.setName(name)
+        self._source_file = source_file  # SourceFile containing this tree
+        self._name = name  # Name of the node
+        self._hash = None  # Hash of the tree
+        self._is_statement = False  # TODO: What is this ?
+        self._mark = None  # Used for clustering
+
+        self._covered_line_numbers = None  # Line covered by the tree and subtrees
+        self._height = None  # Depth of the tree
+        self._size = None  # Number of node + free variable costs
+        self._none_count = None  # Number of None node in subtrees
+        self._parent = None  # Parent node
+        self._childs = []  # List of child nodes
+
+    # Members operations
 
     def getSourceFile(self):
         return self._source_file
 
+    def getMark(self):
+        return self._mark
+
     def setMark(self, mark):
         self._mark = mark
 
-    def getMark(self):
-        return self._mark
+    def isStatement(self):
+        return self._is_statement
 
     def markAsStatement(self, val=True):
         self._is_statement = val
 
-    def isStatement(self):
-        return self._is_statement
+    def getName(self):
+        return self._name
 
     def setName(self, name):
         self._name = name
@@ -109,8 +116,7 @@ class AbstractSyntaxTree(object):
     def getLineNumbers(self):
         return self._line_numbers
 
-    def getCoveredLineNumbers(self):
-        return self._covered_line_numbers
+    # Tree operations
 
     def getParent(self):
         return self._parent
@@ -118,7 +124,60 @@ class AbstractSyntaxTree(object):
     def setParent(self, parent):
         self._parent = parent
 
+    def getChilds(self):
+        return self._childs
+
+    def getChildCount(self):
+        return len(self._childs)
+
+    def addChild(self, child, save_parent=False):
+        if not save_parent:
+            child.setParent(self)
+        self._childs.append(child)
+
+    def getCoveredLineNumbers(self):
+        return self._covered_line_numbers
+
+    def propagateCoveredLineNumbers(self):
+        """Compute self._covered_line_numbers for self and childrens
+
+        :returns: A set of line numbers
+        :rtype: {Set[int]}
+        """
+        self._covered_line_numbers = set(self._line_numbers)
+        for child in self.getChilds():
+            self._covered_line_numbers.update(
+                child.propagateCoveredLineNumbers())
+        return self._covered_line_numbers
+
+    def getHeight(self):
+        """Return height for this tree
+
+        The height is the maximum depth of the tree
+        :returns: Height of tree
+        :rtype: {int}
+        """
+        return self._height
+
+    def propagateHeight(self):
+        """Compute height for this tree
+
+        The height is the maximum depth of the tree
+        :returns: Height of self
+        :rtype: {int}
+        """
+        if self.getChildCount() == 0:
+            self._height = 0
+        else:
+            self._height = max(c.propagateHeight() for c in self.getChilds()) + 1
+        return self._height
+
     def getAncestors(self):
+        """Return statement ancestors
+
+        :returns: Ancestors that are statements
+        :rtype: {List[AbstractSyntaxTree]}
+        """
         r = []
         t = self.getParent()
         while t:
@@ -128,68 +187,118 @@ class AbstractSyntaxTree(object):
         return r
 
     def getSourceLines(self):
-        source_line_numbers = set([])
-        r = []
+        """Return source lines covered by the tree
+
+        :returns: A list of lines
+        :rtype: {List[str]}
+        """
         source_line_numbers = self.getCoveredLineNumbers()
-        source_line_numbers_list = list(
-            range(min(source_line_numbers), max(source_line_numbers) + 1))
-        source_line_numbers_list.sort()
-        for source_line_number in source_line_numbers_list:
-            r.append(self.getSourceFile().getSourceLine(source_line_number))
+        source_line_numbers_list = sorted(
+            range(min(source_line_numbers),
+                  max(source_line_numbers) + 1))
+        getLine = lambda i: self.getSourceFile().getSourceLine(i)
+        return [getLine(i) for i in source_line_numbers_list]
+
+    def getAllStatementSequences(self):
+        # TODO: What is a statement ?
+        r = []
+        current = StatementSequence()
+        for child in self.getChilds():
+            if child.isStatement():
+                current.addStatement(child)
+            elif (not current.isEmpty()) and len(current.getCoveredLineNumbers()) >= arguments.size_threshold:
+                r.append(current)
+                current = StatementSequence()
+            r.extend(child.getAllStatementSequences())
+        if (not current.isEmpty()) and len(current.getCoveredLineNumbers()) >= arguments.size_threshold:
+            r.append(current)
         return r
 
-    def getName(self):
-        return self._name
+    def getSize(self, ignore_none=True):
+        """Return number of nodes and free variables cost
 
-    def getChilds(self):
-        return self._childs
+        :param ignore_none: Do not account for None nodes, defaults to True
+        :type ignore_none: bool, optional
+        :returns: size of tree
+        :rtype: {float}
+        """
+        ret = self._size
+        if ignore_none:
+            ret -= self._none_count
+        return ret
 
-    def getChildCount(self):
-        return len(self._childs)
+    def storeSize(self):
+        """Compute the number of nodes and free variables cost recursively
 
-    def propagateCoveredLineNumbers(self):
-        self._covered_line_numbers = set(self._line_numbers)
-        for child in self.getChilds():
-            self._covered_line_numbers.update(
-                child.propagateCoveredLineNumbers())
-        return self._covered_line_numbers
+        The number of nodes and `free_variable_cost`, also compute the number
+        of None node
+        :returns: Size of tree
+        :rtype: {float}
+        """
+        observed = set()
+        self._none_count = 0
 
-    def propagateHeight(self):
-        if self.getChildCount() == 0:
-            self._height = 0
-        else:
-            self._height = max([c.propagateHeight()
-                                for c in self.getChilds()]) + 1
-        return self._height
+        def rec_calc_size(t):
+            r = 0
+            if t in observed:
+                return r
 
-    def getHeight(self):
-        return self._height
+            if t.getChildCount():
+                for c in t.getChilds():
+                    r += rec_calc_size(c)
+            else:
+                observed.add(t)
+                if t.getName() == 'None':
+                    self._none_count += 1
+                if t.__class__.__name__ == 'FreeVariable':
+                    r += free_variable_cost
+                else:
+                    r += 1
+            return r
+        if self._size is None:
+            self._size = rec_calc_size(self)
 
-    def addChild(self, child, save_parent=False):
-        if not save_parent:
-            child.setParent(self)
-        self._childs.append(child)
+    def getTokenCount(self):
+        """Count certain tokens in tree
 
-    def setChildCount(self, count):
-        assert(not self._childs)
-        self._childs = count * [None]
+        Tokens are listed below
+        :returns: Number of tokens
+        :rtype: {int}
+        """
+        valid_tokens = ['Add', 'Assign', 'Sub', 'Div', 'Mul', 'Mod',
+                        'Function', 'If', 'Class', 'Raise']
 
-    def setNextUndefinedChild(self, c):
-        for i in range(len(self.getChilds())):
-            if self.getChilds()[i] is None:
-                self._childs[i] = c
-        assert()
+        def rec_calc_size(t):
+            if t.getChildCount():
+                r = 0
+                if t.getName() in valid_tokens:
+                    r = 1
+                for c in t.getChilds():
+                    r += rec_calc_size(c)
+            else:
+                # self is leaf
+                if t.getName()[0] != "'" and t.getName() != 'Pass':
+                    # TODO: What is this ?
+                    return 0
+                else:
+                    return 1
+            return r
+        return rec_calc_size(self)
 
-    def __str__(self):
-        return ' ( ' + self.getName() + ' '.join([str(child) for child in self.getChilds()]) + ' ) '
-
-    def getFullHash(self):
-        return self.getDCupHash(-1)
+    # Compute hashes
 
     def getDCupHash(self, level):
-        if len(self._childs) == 0:
-            ret = 0  # in case of names and constants
-        else:
+        """Compute a hash using child nodes
+
+        The hash is computed by summing per node hashes. A node hash is made of
+        the depth of the node, the name and the number of child.
+        :param level: maximum depth to compute hash
+        :type level: int
+        :returns: a tree hash
+        :rtype: {int}
+        """
+        ret = 0  # in case of names and constants
+        if len(self._childs):
             ret = (level + 1) * hash(self._name) * len(self._childs)
         # if level == -1, it will not stop until it reaches the leaves
         if level != 0:
@@ -198,12 +307,24 @@ class AbstractSyntaxTree(object):
                 ret += (i + 1) * child.getDCupHash(level - 1)
         return hash(ret)
 
+    def getFullHash(self):
+        """Compute a hash for the whole tree
+
+        :returns: a tree hash
+        :rtype: {int}
+        """
+        return self.getDCupHash(-1)
+
     def __hash__(self):
         # TODO check correctness
         if not self._hash:
             self._hash = hash(self.getDCupHash(3) + hash(self.getName()))
         return self._hash
-        # return hash(self.getDCupHash(3) + hash(self.getName()))
+
+    def __str__(self):
+        return ' ( {} {} ) '.format(
+            self.getName(),
+            ' '.join(map(str, self.getChilds())))
 
     def __eq__(self, tree2):
         tree1 = self
@@ -218,66 +339,6 @@ class AbstractSyntaxTree(object):
                 return False
         return True
 
-    def getAllStatementSequences(self):
-        r = []
-        current = StatementSequence()
-        for child in self.getChilds():
-            if child.isStatement():
-                current.addStatement(child)
-            else:
-                if (not current.isEmpty()) and len(current.getCoveredLineNumbers()) >= arguments.size_threshold:
-                    r.append(current)
-                    current = StatementSequence()
-            r.extend(child.getAllStatementSequences())
-        if (not current.isEmpty()) and len(current.getCoveredLineNumbers()) >= arguments.size_threshold:
-            r.append(current)
-        return r
-
-    def storeSize(self):
-        observed = set()
-        self._none_count = 0
-
-        def rec_calc_size(t):
-            r = 0
-            if t not in observed:
-                if t.getChildCount():
-                    for c in t.getChilds():
-                        r += rec_calc_size(c)
-                else:
-                    observed.add(t)
-                    if t.getName() == 'None':
-                        self._none_count += 1
-                    if t.__class__.__name__ == 'FreeVariable':
-                        r += free_variable_cost
-                    else:
-                        r += 1
-            return r
-        if not hasattr(self, '_size'):
-            self._size = rec_calc_size(self)
-
-    def getSize(self, ignore_none=True):
-        ret = self._size
-        if ignore_none:
-            ret -= self._none_count
-        return ret
-
-    def getTokenCount(self):
-        def rec_calc_size(t):
-            if t.getChildCount():
-                if t.getName() in ['Add', 'Assign', 'Sub', 'Div', 'Mul', 'Mod', 'Function', 'If', 'Class', 'Raise']:
-                    r = 1
-                else:
-                    r = 0
-                for c in t.getChilds():
-                    r += rec_calc_size(c)
-            else:
-                if t.getName()[0] != "'" and t.getName() != 'Pass':
-                    return 0
-                else:
-                    return 1
-            return r
-        return rec_calc_size(self)
-
 
 class StatementSequence(object):
     def __init__(self, sequence=[]):
@@ -285,6 +346,12 @@ class StatementSequence(object):
         self._source_file = None
         for s in sequence:
             self.addStatement(s)
+
+    def isEmpty(self):
+        return self._sequence == []
+
+    def getSourceFile(self):
+        return self._source_file
 
     def getCoveredLineNumbers(self):
         r = set()
@@ -295,8 +362,8 @@ class StatementSequence(object):
     def getAncestors(self):
         return self[0].getAncestors()
 
-    def isEmpty(self):
-        return (self._sequence == [])
+    def getLength(self):
+        return len(self)
 
     def addStatement(self, statement):
         self._sequence.append(statement)
@@ -312,16 +379,12 @@ class StatementSequence(object):
         return self._sequence.__len__()
 
     def __str__(self):
-        return ','.join([str(s) for s in self])
+        return ','.join(map(str, self))
 
     def getWeight(self):
         return sum([s.getCluster().getUnifierSize() for s in self._sequence])
 
-    def getSourceFile(self):
-        return self._source_file
-
     def getSourceLines(self):
-        source_line_numbers = set([])
         r = []
         for statement in self:
             r.extend(statement.getSourceLines())
@@ -343,9 +406,6 @@ class StatementSequence(object):
         for statement in self:
             tree.addChild(statement, True)
         return tree
-
-    def getLength(self):
-        return len(self)
 
     def getCoveredLineNumbersCount(self):
         covered = set()
