@@ -25,9 +25,15 @@ from past.utils import old_div
 #   along with Clone Digger.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import logging
+import copy
 
-from .anti_unification import *
-from .abstract_syntax_tree import *
+from . import arguments
+from . import suffix_tree
+from .anti_unification import Cluster, Unifier
+from .abstract_syntax_tree import StatementSequence, PairSequences
+
+MAX_SEQUENCE_LENGTH = 1000
 
 
 def findDuplicateCode(source_files, report):
@@ -41,37 +47,35 @@ def findDuplicateCode(source_files, report):
         statement_count += sum([len(s) for s in sequences])
 
     if not sequences_lengths:
-        print('Input is empty or the size of the input is below the size threshold')
-        # sys.exit(0)
+        logging.warning('Input is empty or the size of the input is below the size threshold')
         return []
 
-    if verbose:
-        n_sequences = len(sequences_lengths)
-        avg_seq_length = old_div(sum(sequences_lengths), float(n_sequences))
-        max_seq_length = max(sequences_lengths)
+    n_sequences = len(sequences_lengths)
+    avg_seq_length = old_div(sum(sequences_lengths), float(n_sequences))
+    max_seq_length = max(sequences_lengths)
 
-        print('%d sequences' % (n_sequences,))
-        print('average sequence length: %f' % (avg_seq_length,))
-        print('maximum sequence length: %d' % (max_seq_length,))
-        sequences_without_restriction = statement_sequences
-        sequences = []
-        if not arguments.force:
-            for sequence in sequences_without_restriction:
-                if len(sequence) > 1000:
-                    first_statement = sequence[0]
-                    print()
-                    print('-----------------------------------------')
-                    print('Warning: sequences of statements, consists of %d elements is too long.' % (
-                        len(sequence),))
-                    print('It starts at %s:%d.' % (
+    logging.info('{} sequences'.format(n_sequences))
+    logging.info('average sequence length: {}'.format(avg_seq_length))
+    logging.info('maximum sequence length: {}'.format(max_seq_length))
+
+    sequences_without_restriction = statement_sequences
+    sequences = []
+    if not arguments.force:
+        for sequence in sequences_without_restriction:
+            if len(sequence) > MAX_SEQUENCE_LENGTH:
+                first_statement = sequence[0]
+                logging.info('-----------------------------------------')
+                logging.info(
+                    'Warning: sequences of statements starting at {}:{}, consists of {} '
+                    'elements which is too long.'.format(
                         first_statement.getSourceFile().getFileName(),
-                        min(first_statement.getCoveredLineNumbers())))
-                    print(
-                        'It will be ignored. Use --force to override this restriction.\n'
-                        'Please refer to http://clonedigger.sourceforge.net/documentation.html\n'
-                        '-----------------------------------------')
-                else:
-                    sequences.append(sequence)
+                        min(first_statement.getCoveredLineNumbers()),
+                        len(sequence)))
+                logging.info('It will be ignored. Use --force to override this restriction.')
+                logging.info('Please refer to http://clonedigger.sourceforge.net/documentation.html')
+                logging.info('-----------------------------------------')
+            else:
+                sequences.append(sequence)
 
     def calc_statement_sizes():
         for sequence in statement_sequences:
@@ -102,9 +106,8 @@ def findDuplicateCode(source_files, report):
             statements = hash_to_statement[h]
             for statement in statements:
                 processed_statements_count += 1
-                if verbose and ((processed_statements_count % 1000) == 0):
-                    print('%d,' % (processed_statements_count,), end=' ')
-                    sys.stdout.flush()
+                if (processed_statements_count % 1000) == 0:
+                    logging.info('{},'.format(processed_statements_count))
                 bestcluster = None
                 mincost = sys.maxsize
                 for cluster in local_clusters:
@@ -133,9 +136,8 @@ def findDuplicateCode(source_files, report):
             clusters = clusters_map[h]
             for statement in hash_to_statement[h]:
                 processed_statements_count += 1
-                if verbose and ((processed_statements_count % 1000) == 0):
-                    print('%d,' % (processed_statements_count,), end=' ')
-                    sys.stdout.flush()
+                if (processed_statements_count % 1000) == 0:
+                    logging.info('{},'.format(processed_statements_count))
                 mincost = sys.maxsize
                 for cluster in clusters:
                     new_u = Unifier(cluster.getUnifierTree(), statement)
@@ -172,16 +174,14 @@ def findDuplicateCode(source_files, report):
                             for i in range(first_statement_index, i):
                                 new_sequence[i] = None
                             first_statement = sequence[first_statement_index]
-                            print()
-                            print('-----------------------------------------')
-                            print('Warning: sequence of statements starting at %s:%d' % (
-                                first_statement.getSourceFile().getFileName(), min(first_statement.getCoveredLineNumbers())))
-                            print('consists of many similar statements.')
-                            print(
-                                'It will be ignored. Use --force to override this restriction.')
-                            print(
-                                'Please refer to http://clonedigger.sourceforge.net/documentation.html')
-                            print('-----------------------------------------')
+                            logging.info('-----------------------------------------')
+                            logging.info('Warning: sequence of statements starting at {}:{} consists of many '
+                                'similar statements.'.format(
+                                    first_statement.getSourceFile().getFileName(),
+                                    min(first_statement.getCoveredLineNumbers())))
+                            logging.info('It will be ignored. Use --force to override this restriction.')
+                            logging.info('Please refer to http://clonedigger.sourceforge.net/documentation.html')
+                            logging.info('-----------------------------------------')
                             flag = True
             new_sequence = new_sequence + [None]
             cur_sequence = StatementSequence()
@@ -256,9 +256,9 @@ def findDuplicateCode(source_files, report):
 
     def remove_dominated_clones(clones):
         ret_clones = []
-#       def f_cmp(a, b):
-#           return a.getLevel().__cmp__(b.getLevel())
-#       clones.sort(f_cmp)
+        # def f_cmp(a, b):
+        #     return a.getLevel().__cmp__(b.getLevel())
+        # clones.sort(f_cmp)
         statement_to_clone = {}
         for clone in clones:
             for sequence in clone:
@@ -289,51 +289,38 @@ def findDuplicateCode(source_files, report):
                 ret_clones.append(clone)
         return ret_clones
 
-    if verbose:
-        print('Number of statements: ', statement_count)
-        print('Calculating size for each statement...', end=' ')
-        sys.stdout.flush()
+    logging.info('Number of statements: {}'.format(statement_count))
+    logging.info('Calculating size for each statement...')
     calc_statement_sizes()
-    if verbose:
-        print('done')
+    logging.info('Calculating size for each statement... Done')
 
-    if verbose:
-        print('Building statement hash...', end=' ')
-        sys.stdout.flush()
+    logging.info('Building statement hash...')
     report.startTimer('Building statement hash')
     if arguments.clusterize_using_hash:
         hash_to_statement = build_hash_to_statement(dcup_hash=False)
     else:
         hash_to_statement = build_hash_to_statement(dcup_hash=True)
     report.stopTimer()
-    if verbose:
-        print('done')
-        print('Number of different hash values: ', len(hash_to_statement))
+    logging.info('Building statement hash... Done')
+    logging.info('Number of different hash values: {}'.format(len(hash_to_statement)))
 
     if arguments.clusterize_using_dcup or arguments.clusterize_using_hash:
-        print('Marking each statement with its hash value')
+        logging.info('Marking each statement with its hash value')
         mark_using_hash(hash_to_statement)
     else:
-        if verbose:
-            print('Building patterns...', end=' ')
-            sys.stdout.flush()
+        logging.info('Building patterns...')
         report.startTimer('Building patterns')
         clusters_map = build_unifiers(hash_to_statement)
         report.stopTimer()
-        if verbose:
-            print(Cluster.count, 'patterns were discovered')
-            print('Choosing pattern for each statement...', end=' ')
-            sys.stdout.flush()
+        logging.info('{} patterns were discovered'.format(Cluster.count))
+        logging.info('Choosing pattern for each statement...')
         report.startTimer('Marking similar statements')
         clusterize(hash_to_statement, clusters_map)
         report.stopTimer()
-        if verbose:
-            print('done')
+        logging.info('Choosing pattern for each statement... Done')
 
     if arguments.report_unifiers:
-        if verbose:
-            print('Building reverse hash for reporting ...', end=' ')
-            sys.stdout.flush()
+        logging.info('Building reverse hash for reporting ...')
         reverse_hash = {}
         for sequence in statement_sequences:
             for statement in sequence:
@@ -342,12 +329,9 @@ def findDuplicateCode(source_files, report):
                     reverse_hash[mark] = []
                 reverse_hash[mark].append(statement)
         report.setMarkToStatementHash(reverse_hash)
-        if verbose:
-            print('done')
+        logging.info('Building reverse hash for reporting ... Done')
 
-    if verbose:
-        print('Finding similar sequences of statements...', end=' ')
-        sys.stdout.flush()
+    logging.info('Finding similar sequences of statements...')
 
     if not arguments.force:
         statement_sequences = filterOutLongEquallyLabeledSequences(
@@ -356,26 +340,20 @@ def findDuplicateCode(source_files, report):
     report.startTimer('Finding similar sequences of statements')
     duplicate_candidates = findHugeSequences()
     report.stopTimer()
-    if verbose:
-        print(len(duplicate_candidates), ' sequences were found')
-        print('Refining candidates...', end=' ')
-        sys.stdout.flush()
+    logging.info('{} sequences were found'.format(len(duplicate_candidates)))
+    logging.info('Refining candidates...')
     if arguments.distance_threshold != -1:
         report.startTimer('Refining candidates')
         clones = refineDuplicates(duplicate_candidates)
         report.stopTimer()
     else:
         clones = duplicate_candidates
-    if verbose:
-        print(len(clones), 'clones were found')
+    logging.info('{} clones were found'.format(len(clones)))
     if arguments.distance_threshold != -1:
-        if verbose:
-            print('Removing dominated clones...', end=' ')
-            sys.stdout.flush()
+        logging.info('Removing dominated clones...')
         old_clone_count = len(clones)
         clones = remove_dominated_clones(clones)
-        if verbose:
-            print(len(clones) - old_clone_count, 'clones were removed')
+        logging.info('{} clones were removed'.format(len(clones) - old_clone_count))
 
     # get covered source lines for all detected clones (set of all)
     covered_source_lines = set()

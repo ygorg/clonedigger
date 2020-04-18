@@ -30,6 +30,7 @@ import sys
 
 import os
 import traceback
+import logging
 from optparse import OptionParser
 
 from . import ast_suppliers
@@ -41,7 +42,7 @@ from . import reports
 def parse_file(file_name, func_prefixes, report, options, supplier):
     source_file = None
     try:
-        print('Parsing ', file_name, '...', end=' ')
+        logging.info('Parsing {}...'.format(file_name))
         sys.stdout.flush()
         if options.language == 'python':
             source_file = supplier(file_name, func_prefixes)
@@ -51,11 +52,10 @@ def parse_file(file_name, func_prefixes, report, options, supplier):
         source_file.getTree().propagateCoveredLineNumbers()
         source_file.getTree().propagateHeight()
         report.addFileName(file_name)
-        print('done')
     except:
         s = 'Error: can\'t parse "%s" \n: ' % (file_name,) + traceback.format_exc()
         report.addErrorInformation(s)
-        print(s)
+        logging.error(s)
     return source_file
 
 
@@ -139,6 +139,9 @@ All arguments are optional. Supported options are:
                        action='store_true', dest='force',
                        help='By default clonedigger ignore statements with more '
                        'than 1000 elements.\nThis option prevent this behaviour.')
+    cmdline.add_option('-v', '--verbose',
+                       action='store_true',
+                       help='Print informations')
 
     # Deal with displaying result
     cmdline.add_option('--dont-print-time',
@@ -157,6 +160,9 @@ def main():
     ##
 
     (options, source_file_names) = cli_arguments()
+
+    if options.verbose:
+        logging.basicConfig(level=logging.INFO)
 
     if options.f_prefixes is not None:
         func_prefixes = tuple([x.strip() for x in options.f_prefixes.split(',')])
@@ -267,7 +273,7 @@ def main():
     try:
         report.writeReport(output_file_name)
     except:
-        print("catched error, removing output file")
+        logging.error("catched error, removing output file")
         if os.path.exists(output_file_name):
             os.remove(output_file_name)
         raise

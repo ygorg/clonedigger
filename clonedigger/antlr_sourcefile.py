@@ -25,6 +25,7 @@ from builtins import object
 #   along with Clone Digger.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 import xml.parsers.expat
 from .abstract_syntax_tree import *
 
@@ -75,7 +76,7 @@ class ANTLRSourceFile(SourceFile):
         elif os.name in ['nt', 'dos', 'ce']:
             class_path_delimeter = ';'
         else:
-            print('unsupported OS')
+            logging.error('unsupported OS')
             assert 0
 
         command = (
