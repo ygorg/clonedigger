@@ -78,55 +78,76 @@ All arguments are optional. Supported options are:
     cmdline.add_option('-l', '--language', dest='language', default='python',
                        type='choice', choices=['python', 'java', 'lua', 'javascript', 'js'],
                        help='the programming language')
-    cmdline.add_option('--no-recursion', dest='no_recursion',
-                       action='store_true',
-                       help='do not traverse directions recursively')
-    cmdline.add_option('-o', '--output', dest='output',
-                       help='the name of the output file ("output.html" by default)')
-    cmdline.add_option('--clustering-threshold',
-                       type='int', dest='clustering_threshold', default=10,
-                       help='read the paper for semantics')
+
     cmdline.add_option('--distance-threshold',
                        type='int', dest='distance_threshold',
-                       help='the maximum amount of differences between pair of sequences in clone pair (5 by default). Larger value leads to larger amount of false positives')
-    cmdline.add_option('--hashing-depth',
-                       type='int', dest='hashing_depth', default=1,
-                       help='default value if 1, read the paper for semantics. Computation can be speeded up by increasing this value (but some clones can be missed)')
+                       help='the maximum amount of differences between pair of'
+                       'sequences in clone pair (5 by default). Larger value leads'
+                       'to larger amount of false positives')
     cmdline.add_option('--size-threshold',
                        type='int', dest='size_threshold',
-                       help='the minimum clone size. The clone size for its turn is equal to the count of lines of code in its the largest fragment')
+                       help='the minimum clone size. The clone size for its turn'
+                       ' is equal to the count of lines of code in its the largest fragment')
+
     cmdline.add_option('--clusterize-using-dcup',
                        action='store_true', dest='clusterize_using_dcup',
-                       help='mark each statement with its D-cup value instead of the most similar pattern. This option together with --hashing-depth=0 make it possible to catch all considered clones (but it is slow and applicable only to small programs)')
-    cmdline.add_option('--dont-print-time',
-                       action='store_false', dest='print_time',
-                       help='do not print time')
-    cmdline.add_option('-f', '--force',
-                       action='store_true', dest='force',
-                       help='')
-    cmdline.add_option('--force-diff',
-                       action='store_true', dest='use_diff',
-                       help='force highlighting of differences based on the diff algorithm')
+                       help='mark each statement with its D-cup value instead of'
+                       ' the most similar pattern. This option together with '
+                       '--hashing-depth=0 make it possible to catch all considered'
+                       ' clones (but it is slow and applicable only to small programs)')
     cmdline.add_option('--fast',
                        action='store_true', dest='clusterize_using_hash',
                        help='find only clones, which differ in variable and function names and constants')
+    cmdline.add_option('--clustering-threshold',
+                       type='int', dest='clustering_threshold', default=10,
+                       help='read the paper for semantics')
+    cmdline.add_option('--hashing-depth',
+                       type='int', dest='hashing_depth', default=1,
+                       help='default value if 1, read the paper for semantics. '
+                       'Computation can be speeded up by increasing this value '
+                       '(but some clones can be missed)')
+
+    # Deal with input
+    cmdline.add_option('--no-recursion', dest='no_recursion',
+                       action='store_true',
+                       help='do not traverse directions recursively')
     cmdline.add_option('--ignore-dir',
                        action='append', dest='ignore_dirs', default=[],
                        help='exclude directories from parsing')
+    cmdline.add_option('--file-list', dest='file_list',
+                       help='a file that contains a list of file names that must'
+                       ' be processed by Clone Digger')
+    cmdline.add_option('--func-prefixes',
+                       action='store', dest='f_prefixes', default='',
+                       help='skip functions/methods with these prefixes (provide'
+                       ' a CSV string as argument)')
+
+    # Deal with output
+    cmdline.add_option('-o', '--output', dest='output',
+                       help='the name of the output file ("output.html" by default)')
     cmdline.add_option('--eclipse-output',
                        dest='eclipse_output',
                        help='for internal usage only')
     cmdline.add_option('--cpd-output',
                        action='store_true', dest='cpd_output',
-                       help='output as PMD''s CPD''s XML format. If output file not defined, output.xml is generated')
+                       help='output as PMD''s CPD''s XML format. If output file '
+                       'not defined, output.xml is generated')
     cmdline.add_option('--report-unifiers',
                        action='store_true', dest='report_unifiers',
                        help='')
-    cmdline.add_option('--func-prefixes',
-                       action='store', dest='f_prefixes', default='',
-                       help='skip functions/methods with these prefixes (provide a CSV string as argument)')
-    cmdline.add_option('--file-list', dest='file_list',
-                       help='a file that contains a list of file names that must be processed by Clone Digger')
+    cmdline.add_option('-f', '--force',
+                       action='store_true', dest='force',
+                       help='By default clonedigger ignore statements with more '
+                       'than 1000 elements.\nThis option prevent this behaviour.')
+
+    # Deal with displaying result
+    cmdline.add_option('--dont-print-time',
+                       action='store_false', dest='print_time',
+                       help='do not print time')
+    cmdline.add_option('--force-diff',
+                       action='store_true', dest='use_diff',
+                       help='force highlighting of differences based on the diff algorithm')
+
     return cmdline.parse_args()
 
 
