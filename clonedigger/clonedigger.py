@@ -118,7 +118,7 @@ All arguments are optional. Supported options are:
                        help='a file that contains a list of file names that must'
                        ' be processed by Clone Digger')
     cmdline.add_option('--func-prefixes',
-                       action='store', dest='f_prefixes', default='',
+                       action='store', dest='f_prefixes', default=(),
                        help='skip functions/methods with these prefixes (provide'
                        ' a CSV string as argument)')
 
@@ -164,10 +164,9 @@ def main():
     if options.verbose:
         logging.basicConfig(level=logging.INFO)
 
-    if options.f_prefixes is not None:
-        func_prefixes = tuple([x.strip() for x in options.f_prefixes.split(',')])
-    else:
-        func_prefixes = ()
+    if options.f_prefixes:
+        options.f_prefixes = tuple([x.strip() for x in options.f_prefixes.split(',')])
+    func_prefixes = options.f_prefixes
 
     if options.language != 'python':
         options.use_diff = True
