@@ -40,40 +40,58 @@ MAX_SEQUENCE_LENGTH = 1000
 
 
 def build_hash_to_statement(statement_sequences, dcup_hash=True):
-        hash_to_statement = {}
-        for statement_sequence in statement_sequences:
-            for statement in statement_sequence:
-                if dcup_hash:
-                    # 3 - CONSTANT HERE!
-                    h = statement.getDCupHash(arguments.hashing_depth)
-                else:
-                    h = statement.getFullHash()
-                if h not in hash_to_statement:
-                    hash_to_statement[h] = [statement]
-                else:
-                    hash_to_statement[h].append(statement)
-        return hash_to_statement
+    """Compute hash for every statement
+
+    Two statement can have the same hash
+
+    :param statement_sequences: Statements to compute hash
+    :type statement_sequences: List[StatementSequence]
+    :param dcup_hash: Use dcup hash, defaults to True
+    :type dcup_hash: bool, optional
+    :returns: A map Hash -> List[Statement]
+    :rtype: {Dict[int -> List[Statement]]}
+    """
+    hash_to_statement = {}
+    for statement_sequence in statement_sequences:
+        for statement in statement_sequence:
+            if dcup_hash:
+                # 3 - CONSTANT HERE!
+                h = statement.getDCupHash(arguments.hashing_depth)
+            else:
+                h = statement.getFullHash()
+            if h not in hash_to_statement:
+                hash_to_statement[h] = [statement]
+            else:
+                hash_to_statement[h].append(statement)
+    return hash_to_statement
 
 
 def build_unifiers(hash_to_statement):
-    """[summary]
+    """Populate Cluster object with Statement.
 
-    [description]
-    :param hash_to_statement: [description]
+    Greedily add the cheapest statement to Clusters by unifying, thus creating
+    Unifiers for each cluster. This clusters on hash, but finer.
+
+    :param hash_to_statement: Statements grouped by hash
     :type hash_to_statement: Dict[int, List[AbstractSyntaxTree]]
-    :returns: [description]
-    :rtype: {[type]}
+    :returns: A list of unified Cluster
+    :rtype: {Dict[int, Cluster]}
     """
     processed_statements_count = 0
     clusters = []
     ret = {}
     for h in list(hash_to_statement.keys()):
+        # For each hash cluster it's statements
         local_clusters = []
         statements = hash_to_statement[h]
         for statement in statements:
             processed_statements_count += 1
             if (processed_statements_count % 1000) == 0:
                 logging.info('{},'.format(processed_statements_count))
+
+            # Fig 1. in (Bulychev et al., 2008)
+            # Compute the local cluster that has the lowest cost of adding the
+            #  statement
             bestcluster = None
             mincost = sys.maxsize
             for cluster in local_clusters:
@@ -82,9 +100,16 @@ def build_unifiers(hash_to_statement):
                     mincost = cost
                     bestcluster = cluster
             assert(local_clusters == [] or bestcluster)
+
+            # The minimum cost should not be <0 (how would this be possible ??)
+            # mincost is (len(cluster) * len(cluster.unifier.subs[0]) + len(cluster.unifier.subs[1]))
             if mincost < 0:
                 pdb.set_trace()
             assert mincost >= 0
+
+            # There was no pre-existing local cluster
+            #  or the cost of adding the statement is too big
+            #  Creating a new local cluster
             if bestcluster is None or mincost > arguments.clustering_threshold:
                 newcluster = Cluster(statement)
                 local_clusters.append(newcluster)
@@ -96,10 +121,23 @@ def build_unifiers(hash_to_statement):
 
 
 def clusterize(hash_to_statement, clusters_map):
+    """Add statements to Cluster's unifier
+
+    Greedily add statements to cluster based on distance to Cluster's unifier
+
+    :param hash_to_statement: Statements grouped by hash
+    :type hash_to_statement: Dict[int, List[Statement]]
+    :param clusters_map: Clusters grouped by hash
+    :type clusters_map: Dict[int, List[Cluster]]
+    """
+    # Are the same Statements added to the same clusters than in build_unifiers ??
+    # What does this function do more than just calling setMark on statements
+
     processed_statements_count = 0
     # clusters_map contain hash values for statements, not unifiers
     # therefore it will work correct even if unifiers are smaller than hashing depth value
     for h in hash_to_statement:
+        # For each hash, get statements and local_clusters
         clusters = clusters_map[h]
         for statement in hash_to_statement[h]:
             processed_statements_count += 1
@@ -107,13 +145,26 @@ def clusterize(hash_to_statement, clusters_map):
                 logging.info('{},'.format(processed_statements_count))
             mincost = sys.maxsize
             for cluster in clusters:
+                # For each local_cluster add statement if adding it is cheap
+                # But the statement will always be added to the first local_cluster,
+                #  and the last will likely be never
+
+                # TODO: should this be cluster.getAddCost(statement)
                 new_u = Unifier(cluster.getUnifierTree(), statement)
                 # assert(new_u.getSubstitutions()[0].getSize() == 0)
                 cost = new_u.getSize()
                 if cost < mincost:
+                    # statement.setMark can only hold one value
+                    # The statement can be theoretically added to multiple
+                    #  clusters (is this the case?)
+                    # This will result in statement occuring in multiple cluster,
+                    #  but statement will belong to only one (according to stmt._mark)
                     mincost = cost
                     statement.setMark(cluster)
                     cluster.addWithoutUnification(statement)
+                    # It this the wanted behaviour ?
+                    # Why not creating new Cluster objects ? The same statement
+                    #  can be added once in build_unifiers and once again in here
 
 
 def filterOutLongSequences(statement_sequences, max_length):
@@ -193,14 +244,27 @@ def filterOutLongEquallyLabeledSequences(statement_sequences):
     return statement_sequences
 
 
+# TODO: rename to findCandidateClones
+# TODO: add threshold argument to explicitly say what this function does
 def findHugeSequences(statement_sequences):
+    """Return candidate clones which cover at least `arguments.size_threshold` lines
+
+    Use a suffixTree to find candidate clones.
+
+    :param statement_sequences: Candidate StatetementSequences
+    :type statement_sequences: List[PairSequences]
+    """
+    # Function[Cluster -> int]
     f_size = lambda x: x.getMaxCoveredLines()
+    # Function[List[AbstractSyntaxtree] -> int]
     f_elem = lambda x: StatementSequence(x).getCoveredLineNumbersCount()
+    # Key to use in SuffixTree, Function[AbstractSyntaxTree -> Cluster]
     fcode = lambda x: x.getMark()
 
     suffix_tree_instance = suffix_tree.SuffixTree(fcode)
     for sequence in statement_sequences:
         suffix_tree_instance.add(sequence)
+
     tmp = suffix_tree_instance.getBestMaxSubstrings(arguments.size_threshold, f_size, f_elem)
     return [PairSequences([StatementSequence(s1), StatementSequence(s2)]) for (s1, s2) in tmp]
 
@@ -246,6 +310,15 @@ def refineDuplicates(pairs_sequences):
 
 
 def remove_dominated_clones(clones):
+    """[summary]
+
+    [description]
+
+    :param clones: [description]
+    :type clones: List[PairSequence]
+    :returns: [description]
+    :rtype: {List[PairSequence]}
+    """
     ret_clones = []
     # def f_cmp(a, b):
     #     return a.getLevel().__cmp__(b.getLevel())
@@ -282,6 +355,17 @@ def remove_dominated_clones(clones):
     return ret_clones
 
 
+def print_statistics(sequences_lengths, statement_count):
+    n_sequences = len(sequences_lengths)
+    avg_seq_length = sum(sequences_lengths) / n_sequences
+    max_seq_length = max(sequences_lengths)
+
+    logging.info('{} sequences'.format(n_sequences))
+    logging.info('average sequence length: {}'.format(avg_seq_length))
+    logging.info('maximum sequence length: {}'.format(max_seq_length))
+    logging.info('number of statements: {}'.format(statement_count))
+
+
 def findDuplicateCode(source_files, report):
     statement_sequences = []
     statement_count = 0
@@ -292,29 +376,35 @@ def findDuplicateCode(source_files, report):
         sequences = source_file.getTree().getAllStatementSequences()
         statement_sequences.extend(sequences)
         sequences_lengths.extend([len(s) for s in sequences])
+        # TODO: Compute afterwards, it is [[len(s) for s in stmt] for stmt in seqs]
         statement_count += sum([len(s) for s in sequences])
+        # TODO: Compute afterwards, it is sum(flatten(sequence_lengths))
 
     if not sequences_lengths:
         logging.error('Input is empty or the size of the input is below the size threshold')
         return []
 
-    n_sequences = len(sequences_lengths)
-    avg_seq_length = sum(sequences_lengths) / n_sequences
-    max_seq_length = max(sequences_lengths)
+    print_statistics(sequences_lengths, statement_count)
 
-    logging.info('{} sequences'.format(n_sequences))
-    logging.info('average sequence length: {}'.format(avg_seq_length))
-    logging.info('maximum sequence length: {}'.format(max_seq_length))
+    ##
+    # Prepare statements
+    #  Compute hash value for every statement
+    ##
+
     if not arguments.force:
         statement_sequences = filterOutLongSequences(
             statement_sequences, MAX_SEQUENCE_LENGTH)
 
-    logging.info('Number of statements: '.format(statement_count))
+    # TODO: In order to call `storeSize` and compute hash, the trees must be
+    #  completed. Could this be done earlier ? (Right after parsing files)
+
     logging.info('Calculating size for each statement...')
     for sequence in statement_sequences:
         for statement in sequence:
             statement.storeSize()
 
+    # First step of clustering:
+    #  Use hash to cluster Statements
     logging.info('Building statement hash...')
     report.startTimer('Building statement hash')
     hash_to_statement = build_hash_to_statement(
@@ -324,9 +414,20 @@ def findDuplicateCode(source_files, report):
 
     logging.info('Number of different hash values: {}'.format(len(hash_to_statement)))
 
+    ##
+    # Group statements in clusters of similar statements
+    #  Based on hash, group statements (by setting the `.mark` attribute)
+    ##
+
+    # Second step of clustering:
+    #  Find patterns which are recurring sequences of Clusters
+
     if arguments.clusterize_using_dcup or arguments.clusterize_using_hash:
+        # As statements can have the same hash, use the hash to make clusters
         logging.info('Marking each statement with its hash value')
         # mark_using_hash
+        # For each hash make a Cluster
+        # Populate Cluster objects and setMark
         for h in hash_to_statement:
             cluster = Cluster()
             for statement in hash_to_statement[h]:
@@ -336,6 +437,7 @@ def findDuplicateCode(source_files, report):
         logging.info('Building patterns...')
         report.startTimer('Building patterns')
         clusters_map = build_unifiers(hash_to_statement)
+        # Populate Cluster objects
         report.stopTimer()
         logging.info('{} patterns were discovered'.format(Cluster.count))
 
@@ -345,6 +447,11 @@ def findDuplicateCode(source_files, report):
         report.stopTimer()
 
     if arguments.report_unifiers:
+        # TODO: Why do we need to do this, when the Cluster object exist?
+        #  Is there no dict holding Statement -> Cluster ?
+        # We have hash_to_statement : Dict[int -> List[Statement]]
+
+        # Compute a Dict[Cluster -> List[Statement]]
         logging.info('Building reverse hash for reporting...')
         reverse_hash = {}
         for sequence in statement_sequences:
@@ -355,6 +462,10 @@ def findDuplicateCode(source_files, report):
                 reverse_hash[mark].append(statement)
         report.setMarkToStatementHash(reverse_hash)
 
+    ##
+    # Gathering clone candidates
+    ##
+
     logging.info('Finding similar sequences of statements...')
 
     if not arguments.force:
@@ -362,9 +473,14 @@ def findDuplicateCode(source_files, report):
             statement_sequences)
 
     report.startTimer('Finding similar sequences of statements')
+    # Get clone candidates
     duplicate_candidates = findHugeSequences(statement_sequences)
     report.stopTimer()
     logging.info('{} sequences were found'.format(len(duplicate_candidates)))
+
+    ##
+    # Filtering clone candidates
+    ##
 
     logging.info('Refining candidates...')
     if arguments.distance_threshold != -1:
@@ -381,9 +497,17 @@ def findDuplicateCode(source_files, report):
         clones = remove_dominated_clones(clones)
         logging.info('{} clones were removed'.format(len(clones) - old_clone_count))
 
+    ##
+    # Filling report
+    ##
+
+    # Count covered lines by all clones
+    # todo: in a sequence do all trees and subtrees belong to the same _source_file ?
+    #    if no then the StatementSequence.source_file is 
     # get covered source lines for all detected clones (set of all)
     covered_source_lines = set()
     for clone in clones:
+        # clone is a pair sequence thus it has 2 elements
         for sequence in clone:
             covered_source_lines |= sequence.getLineNumberHashables()
 

@@ -36,13 +36,9 @@ from . import arguments
 
 
 class FreeVariable(AbstractSyntaxTree):
-    """AST node used as placeholder for anti-unifiyng.
+    """AST node used as placeholder for anti-unifiyng."""
 
-    [description]
-    :param free_variables_count: [description]
-    :type free_variables_count: number
-    """
-    free_variables_count = 1
+    free_variables_count = 1  #: Count instanciation of this object
 
     def __init__(self):
         name = 'VAR({})'.format(FreeVariable.free_variables_count)
@@ -64,7 +60,6 @@ class Substitution(object):
     def substitute(self, tree, without_copying=False):
         """Recursively replace trees by substitution.
 
-        [description]
         :param tree: Tree to be substituted.
         :type tree: AbstractSyntaxTree
         :param without_copying: Return tree pointers, defaults to False
@@ -92,6 +87,7 @@ class Substitution(object):
         """Compute size of a substitution.
 
         It is the sum of the size of the trees in substitution.
+
         :returns: Size of substitution.
         :rtype: {float}
         """
@@ -110,6 +106,11 @@ class Unifier(object):
         Tree 2:       `Add (Name (n), Const (1))`
         Anti-unifier: `Add (Name (?1 ), ?2 )`
 
+    Used in:
+        - abstract_syntax_tree.PairSequences: used to compute distance between 2 trees
+        - anti_unification.Cluster: used to add trees to cluster
+        - report.Report: to know if there is a substitution between two code fragment and display them red or cyan
+
     From (Bulychev et al., 2008) II. A.:
     As the name suggests, given two terms, it produces a more general one that
     covers both rather than a more specific one as in unification. Let E1 and E2 be
@@ -126,17 +127,15 @@ class Unifier(object):
     In some abstract syntax tree representations occurrences of the same variable
     refer to the same leaf in a tree. In this case the anti-unifier of
     `Add(Name(i),Name(i))` and `Add(Name(j),Name(j))` will be `Add(Name(?1),Name(?1))`.
+
+    :param t1: Tree 1
+    :type t1: AbstractSyntaxTree
+    :param t2: Tree 2
+    :type t2: AbstractSyntaxTree
+    :param ignore_parametrization: todo:
+    :type ignore_parametrization: bool, optional
     """
     def __init__(self, t1, t2, ignore_parametrization=False):
-        """[summary]
-
-        :param t1: Tree 1
-        :type t1: AbstractSyntaxTree
-        :param t2: Tree 2
-        :type t2: AbstractSyntaxTree
-        :param ignore_parametrization: This is never used in the code, defaults to False
-        :type ignore_parametrization: bool, optional
-        """
         (self._unifier, self._substitutions) = self._unify(t1, t2, ignore_parametrization)
         self._unifier.storeSize()
         for i in (0, 1):
@@ -157,11 +156,9 @@ class Unifier(object):
 
         Given an anti-unifier and two substitutions,
         modify node by replacing trees if the substittion are the same.
-        If ignore_parametrization if True, this function morally performs `t.update(s)`.
+        If ignore_parametrization is True, this function morally performs `t.update(s)`.
         Else: some keys are not updated, but they will modify the `node`.
 
-
-        [description]
         :param node: anti-unifier
         :type node: AbstractSyntaxTree
         :param s: A substitution to use as update
@@ -201,11 +198,12 @@ class Unifier(object):
         """Create anti-unifier for node1 and node2.
 
         Recursively create an anti-unifier using substitutions.
+
         :param node1: Tree to be anti-unified
         :type node1: AbstractSyntaxTree
         :param node2: Tree to be anti-unified
         :type node2: AbstractSyntaxTree
-        :param ignore_parametrization: [description]
+        :param ignore_parametrization: todo:
         :type ignore_parametrization: bool
         :returns: An anti-unifier and the substitutions performed.
         :rtype: {Tuple[AbstractSyntaxTree, Tuple[Substitution,Substitution]]}
@@ -239,48 +237,77 @@ class Unifier(object):
 
 
 class Cluster(object):
-    count = 0
+    """Create a cluster consisting of AbstractSyntaxTree
+
+    TODO: how it is used
+
+    :param tree: First element to add, defaults to None
+    :type tree: AbstractSyntaxTree, optional
+    """
+    count = 0  # Cluster instanciation counter, used as identifier
 
     def __init__(self, tree=None):
+        self._n = 0  # TODO: this is len(self._trees)
+        self._unifier_tree = None  # Anti-unifier of trees in cluster, if added via self.unify()
+        self._trees = []  # List of trees in cluster
+        self._max_covered_lines = 0  # Maximum lines covered by a tree in the cluster
         if tree:
             self._n = 1
-            self._unifier_tree = tree
             self._trees = [tree]
             self._max_covered_lines = len(tree.getCoveredLineNumbers())
-        else:
-            self._n = 0
-            self._trees = []
-            self._max_covered_lines = 0
+            # TODO: replace by self.addWithoutUnification(tree)
+            self._unifier_tree = tree
         Cluster.count += 1
         self._cluster_number = Cluster.count
-
-    def getUnifierTree(self):
-        return self._unifier_tree
-
-    def getCount(self):
-        return self._n
-
-    def getAddCost(self, tree):
-        unifier = Unifier(self.getUnifierTree(), tree)
-        return (self.getCount() * unifier.getSubstitutions()[0].getSize() + unifier.getSubstitutions()[1].getSize())
-
-    def unify(self, tree):
-        self._n += 1
-        self._unifier_tree = Unifier(self.getUnifierTree(), tree).getUnifier()
-        self._trees.append(tree)
-
-    def eraseAllTrees(self):
-        self._n = 0
-        self._trees = []
-
-    def addWithoutUnification(self, tree):
-        self._n += 1
-        self._trees.append(tree)
-        if len(tree.getCoveredLineNumbers()) > self._max_covered_lines:
-            self._max_covered_lines = len(tree.getCoveredLineNumbers())
 
     def getMaxCoveredLines(self):
         return self._max_covered_lines
 
     def getUnifierSize(self):
         return self.getUnifierTree().getSize()
+
+    def getCount(self):
+        return self._n
+
+    def getAddCost(self, tree):
+        """Compute the cost of adding a tree to the cluster.
+
+        :param tree: tree
+        :type tree: AbstractSyntaxTree
+        """
+        unifier = Unifier(self.getUnifierTree(), tree)
+        # TODO: shouldn't this be count * (sub[0] + sub[1]) ??
+        return (self.getCount() * unifier.getSubstitutions()[0].getSize() + unifier.getSubstitutions()[1].getSize())
+
+    # Set tree
+
+    def unify(self, tree):
+        """Add tree to cluster by unifying cluster's unifier with `tree`.
+
+        :param tree: Tree
+        :type tree: AbstractSyntaxTree
+        """
+        # TODO: why isn't self._max_covered_lines updated here ?
+        self._n += 1
+        self._unifier_tree = Unifier(self.getUnifierTree(), tree).getUnifier()
+        self._trees.append(tree)
+
+    def addWithoutUnification(self, tree):
+        """Add tree to cluster without updating unifier_tree
+
+        :param tree: Tree
+        :type tree: AbstractSyntaxTree
+        """
+        self._n += 1
+        self._trees.append(tree)
+        if len(tree.getCoveredLineNumbers()) > self._max_covered_lines:
+            self._max_covered_lines = len(tree.getCoveredLineNumbers())
+
+    def eraseAllTrees(self):
+        self._n = 0
+        self._trees = []
+
+    # Get tree
+
+    def getUnifierTree(self):
+        return self._unifier_tree

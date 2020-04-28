@@ -30,13 +30,13 @@ from builtins import object"""
 import os
 import logging
 import xml.parsers.expat
-from .abstract_syntax_tree import *
+from .abstract_syntax_tree import SourceFile, AbstractSyntaxTree
 
 
 class ExpatHandler(object):
 
     def __init__(self, start_node, parent):
-        self.parent = parent
+        self.parent = parent  # SourceFile
         self.stack = [start_node]
 
     def start_element(self, xml_node_name, attrs):
@@ -61,11 +61,8 @@ class ANTLRSourceFile(SourceFile):
 
     def __init__(self, file_name):
         SourceFile.__init__(self, file_name)
-        self.extension = None
         self.producer_type = None
         self.antlr_run = None
-        self.size_threshold = None
-        self.distance_threshold = None
 
     def parse(self, file_name):
         tree_file_name = 'temporary_ast.xml'
@@ -86,13 +83,13 @@ class ANTLRSourceFile(SourceFile):
             'java -classpath ' + producer_class_path +
             class_path_delimeter + antlr_class_path +
             ' TreeProducer %s %s 2>err.log' % (file_name, tree_file_name))
-        input(command)
         if os.system(command):
             with open('err.log') as f:
                 s = f.read()
             raise Exception(s)
 
         self._tree = AbstractSyntaxTree('program')
+        # Translate ANTLR tree into AbstractSyntaxTree
         handler = ExpatHandler(self._tree, self)
         p = xml.parsers.expat.ParserCreate()
         p.StartElementHandler = handler.start_element
@@ -104,6 +101,7 @@ class ANTLRSourceFile(SourceFile):
 
 class JavaANTLRSourceFile(ANTLRSourceFile):
     extension = 'java'
+    # Used as default value if not provided by the CLI arguments
     size_threshold = 10
     distance_threshold = 7
 
@@ -119,6 +117,7 @@ class JavaANTLRSourceFile(ANTLRSourceFile):
 
 class JsANTLRSourceFile(ANTLRSourceFile):
     extension = 'js'
+    # Used as default value if not provided by the CLI arguments
     size_threshold = 5
     distance_threshold = 5
 
@@ -133,6 +132,7 @@ class JsANTLRSourceFile(ANTLRSourceFile):
 
 class LuaANTLRSourceFile (ANTLRSourceFile):
     extension = 'lua'
+    # Used as default value if not provided by the CLI arguments
     size_threshold = 5
     distance_threshold = 5
 

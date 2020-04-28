@@ -45,18 +45,19 @@ from . import arguments
 from . import reports
 
 
-def parse_file(file_name, func_prefixes, report, options, supplier):
+def parse_file(file_name, func_prefixes, report, lang, supplier):
     source_file = None
     try:
         logging.info('Parsing {}...'.format(file_name))
         sys.stdout.flush()
-        if options.language == 'python':
+        if lang == 'python':
             source_file = supplier(file_name, func_prefixes)
         else:
             # TODO implement func_prefixes for java also
             source_file = supplier(file_name)
         source_file.getTree().propagateCoveredLineNumbers()
         source_file.getTree().propagateHeight()
+        t = source_file.getTree()
         report.addFileName(file_name)
     except:
         s = 'Error: can\'t parse "%s" \n: ' % (file_name,) + traceback.format_exc()
@@ -255,7 +256,7 @@ def main():
     report.startTimer('Construction of AST')
 
     for file_name in source_file_names:
-        source_file = parse_file(file_name, func_prefixes, report, options, supplier)
+        source_file = parse_file(file_name, func_prefixes, report, options.language, supplier)
         if source_file:
             source_files.append(source_file)
 

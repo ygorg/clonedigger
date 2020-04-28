@@ -15,16 +15,49 @@
 #   You should have received a copy of the GNU General Public License
 #   along with Clone Digger.  If not, see <http://www.gnu.org/licenses/>.
 
+"""abstract_syntax_tree module
+
+.. todo:: What do free_variable_cost represent ?
+.. todo:: Move free_variable_cost to FreeVariable.free_variable_cost
+"""
+
+"""from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
+"""
+
 from . import arguments
 
-# TODO: What is this ?
 free_variable_cost = 0.5
 
 
 def filter_func(s):
+    """Remove trailing whitespace if begins with non space characters
+
+    .. todo:: Equivalent of re.sub(r'[^\s]+)\s*', r'\1', s) ?
+
+    :param s: String to be filtered
+    :type s: str
+    :returns: Trimmed string
+    :rtype: {str}
+
+    >>> filter_func('def function(): \\n')
+    'def function():'
+    >>> filter_func('\\n \\n')
+    '\\n \\n'
+    """
     for i in range(len(s) - 1, -2, -1):
+        # Find first character from end that is not a space
         if i < 0 or not s[i].isspace():
             break
+    # If found trim
     if i >= 0:
         return s[:i + 1]
     else:
@@ -32,16 +65,34 @@ def filter_func(s):
 
 
 class SourceFile(object):
-    size_threshold = 5
-    distance_threshold = 5
+    """Abstract class that create AST from a code file.
+
+    Read a code file, parse it and create a corresponding AST.
+
+    :param _source_lines: Original lines of the source file.
+    :type _source_lines: List[str]
+    :param _file_name: Name of the source file.
+    :type _file_name: str
+    :param _tree: AST representing the source file.
+    :type _tree: AbstractSyntaxTree
+    """
+    size_threshold = 5  #: Minimum number of covered lines of a clone.
+    distance_threshold = 5  #: Maximum edit distance of a clone.
 
     def __init__(self, file_name):
         with open(file_name, 'r') as f:
             self._source_lines = [filter_func(s) for s in f]
         self._file_name = file_name
-        self._tree = None  # AbstractSyntaxTree
+        self._tree = None
 
     def getSourceLine(self, n):
+        """Return n-th line of the file
+
+        :param n: Line number
+        :type n: int
+        :returns: n-th line of self._file_name
+        :rtype: {str}
+        """
         # if n >= len(self._source_lines):
         #     return ''
         # TODO
@@ -64,21 +115,77 @@ class AbstractSyntaxTree(object):
     From (Bulychev et al., 2008): II. A.
     Strictly speaking, the abstract syntax trees we use are not always trees, since
     leaves containing the same variable references may be merged, [...].
-    """
-    def __init__(self, name=None, line_numbers=[], source_file=None):
-        self._line_numbers = line_numbers
-        self._source_file = source_file  # SourceFile containing this tree
-        self._name = name  # Name of the node
-        self._hash = None  # Hash of the tree
-        self._is_statement = False  # TODO: What is this ?
-        self._mark = None  # Used for clustering
 
-        self._covered_line_numbers = None  # Line covered by the tree and subtrees
-        self._height = None  # Depth of the tree
-        self._size = None  # Number of node + free variable costs
-        self._none_count = None  # Number of None node in subtrees
-        self._parent = None  # Parent node
-        self._childs = []  # List of child nodes
+    A statement (stmt) is a node in the tree that contains an particular tree of code.
+    It is defined by the Language, see `simple statements <https://docs.python.org/2/reference/simple_stmts.html>`_
+    and `compound statements <https://docs.python.org/2/reference/compound_stmts.html>`_.
+    A (really) non exhaustive example (made by printing a tree):
+
+    - a class is a statement
+    - an assignement using only builtin operation is a statement
+    - __init__ function is a statement
+    - global is a statement
+
+    But:
+
+    - a += is not a statement
+    - return is not
+    - calling a function is not
+    - print is not
+    - defining a function is not
+
+    .. todo:: Why is += not a stmt, as it is a simple stmt according to the reference.
+        Same for function definition.
+    .. todo:: self._line_numbers is only used to initialize _covered_line_numbers
+        in self.propagateCoveredLineNumbers. Remove the attribute and initialize
+        _covered_line_numbers ?
+    .. todo: self.getLineNumbers is never used anywhere
+
+    :param _name: Name of the node
+    :type _name: str
+    :param _source_file: SourceFile containing this tree
+    :type _source_file: SourceFile
+    :param _line_numbers: Index of lines covered by the tree.
+    :type _line_numbers: List[int]
+    :param _covered_line_numbers: Line covered by the tree and subtrees
+    :type _covered_line_numbers: List[int]
+    :param _is_statement: This tree is a statement
+    :type _is_statement: bool
+
+    :param _hash: Hash of the tree
+    :type _hash: int
+    :param _mark: Used for clustering
+    :type _mark: Cluster
+
+    :param _parent: Parent node
+    :type _parent: AbstractSyntaxTree
+    :param _childs: List of child nodes
+    :type _childs: List[AbstractSyntaxTree]
+    :param _height: Depth of the tree
+    :type _height: int
+    :param _size: Number of node + free variable costs
+    :type _size: float
+    :param _none_count: Number of None node in subtrees
+    :type _none_count: int
+    """
+
+    def __init__(self, name=None, line_numbers=[], source_file=None):
+        self._name = name
+        self._source_file = source_file
+        # TODO: Arg is used in ExpatHandler.start_element, PythonCompilerSourceFile.rec_build_tree
+        self._line_numbers = line_numbers
+        # TODO: Arg is used in ExpatHandler.start_element, PythonCompilerSourceFile.rec_build_tree
+        self._covered_line_numbers = None
+        self._is_statement = False
+
+        self._hash = None
+        self._mark = None
+
+        self._parent = None
+        self._childs = []
+        self._height = None
+        self._size = None
+        self._none_count = None
 
     # Members operations
 
@@ -104,6 +211,7 @@ class AbstractSyntaxTree(object):
         self._name = name
 
     def getLineNumbers(self):
+        # TODO: Unused
         return self._line_numbers
 
     # Tree operations
@@ -121,6 +229,13 @@ class AbstractSyntaxTree(object):
         return len(self._childs)
 
     def addChild(self, child, save_parent=False):
+        """Add a child and set its parent to self is save_parent
+
+        :param child: Child to add
+        :type child: AbstractSyntaxTree
+        :param save_parent: Set child's parent to self, defaults to False
+        :type save_parent: bool, optional
+        """
         if not save_parent:
             child.setParent(self)
         self._childs.append(child)
@@ -144,6 +259,7 @@ class AbstractSyntaxTree(object):
         """Return height for this tree
 
         The height is the maximum depth of the tree
+
         :returns: Height of tree
         :rtype: {int}
         """
@@ -153,6 +269,7 @@ class AbstractSyntaxTree(object):
         """Compute height for this tree
 
         The height is the maximum depth of the tree
+
         :returns: Height of self
         :rtype: {int}
         """
@@ -163,7 +280,9 @@ class AbstractSyntaxTree(object):
         return self._height
 
     def getAncestors(self):
-        """Return statement ancestors
+        """Return ancestors which are statements.
+
+        Used only in StatementSequence.getAncestors.
 
         :returns: Ancestors that are statements
         :rtype: {List[AbstractSyntaxTree]}
@@ -190,13 +309,24 @@ class AbstractSyntaxTree(object):
         return [getLine(i) for i in source_line_numbers_list]
 
     def getAllStatementSequences(self):
-        # TODO: What is a statement ?
+        """Return sequences of statement that cover at least *arguments.size_threshold* lines.
+
+        Recursively search for statements, a new sequence is created when the lines
+        covered by the sequence exceeds arguments.size_threshold.
+
+        .. todo:: Are the sequence in a specific order and what do they represent ?
+        .. todo:: Is it possible that a subtree `s` of `t` and `t` are in the same sequence ?
+
+        :returns: todo:
+        :rtype: {List[StatementSequence]}
+        """
         r = []
         current = StatementSequence()
         for child in self.getChilds():
             if child.isStatement():
                 current.addStatement(child)
             elif (not current.isEmpty()) and len(current.getCoveredLineNumbers()) >= arguments.size_threshold:
+                # The current StatementSequence is full, make a new one
                 r.append(current)
                 current = StatementSequence()
             r.extend(child.getAllStatementSequences())
@@ -222,6 +352,7 @@ class AbstractSyntaxTree(object):
 
         The number of nodes and `free_variable_cost`, also compute the number
         of None node
+
         :returns: Size of tree
         :rtype: {float}
         """
@@ -252,8 +383,11 @@ class AbstractSyntaxTree(object):
         """Count certain tokens in tree
 
         Tokens are listed below
+
         :returns: Number of tokens
         :rtype: {int}
+
+        .. todo:: What is this ? `t.getName()[0] != "'" and t.getName() != 'Pass'`
         """
         valid_tokens = ['Add', 'Assign', 'Sub', 'Div', 'Mul', 'Mod',
                         'Function', 'If', 'Class', 'Raise']
@@ -282,6 +416,7 @@ class AbstractSyntaxTree(object):
 
         The hash is computed by summing per node hashes. A node hash is made of
         the depth of the node, the name and the number of child.
+
         :param level: maximum depth to compute hash
         :type level: int
         :returns: a tree hash
@@ -331,6 +466,15 @@ class AbstractSyntaxTree(object):
 
 
 class StatementSequence(object):
+    """Holds a sequence of statements (AST)
+
+    Used in suffix_tree.SuffixTree to find patterns in code.
+
+    :param _sequence: A sequence of Statement.
+    :type _sequence: List[AbstractSyntaxTree]
+    :param _source_file: Source file Statements are from.
+    :type _source_file: SourceFile
+    """
     def __init__(self, sequence=[]):
         self._sequence = []
         self._source_file = None
@@ -342,15 +486,6 @@ class StatementSequence(object):
 
     def getSourceFile(self):
         return self._source_file
-
-    def getCoveredLineNumbers(self):
-        r = set()
-        for s in self:
-            r.update(s.getCoveredLineNumbers())
-        return r
-
-    def getAncestors(self):
-        return self[0].getAncestors()
 
     def getLength(self):
         return len(self)
@@ -371,8 +506,7 @@ class StatementSequence(object):
     def __str__(self):
         return ','.join(map(str, self))
 
-    def getWeight(self):
-        return sum([s.getCluster().getUnifierSize() for s in self._sequence])
+    # Line counting/getting operations
 
     def getSourceLines(self):
         r = []
@@ -381,27 +515,70 @@ class StatementSequence(object):
         return r
 
     def getLineNumbers(self):
+        # TODO: Unused
         r = []
         for statement in self:
             r.extend(statement.getLineNumbers())
         return r
 
+    def getCoveredLineNumbers(self):
+        r = set()
+        for s in self:
+            r.update(s.getCoveredLineNumbers())
+        return r
+
+    def getCoveredLineNumbersCount(self):
+        return len(self.getCoveredLineNumbers())
+
     def getLineNumberHashables(self):
+        """Return covered line numbers as (source_file, line_number)
+
+        Return tuples so aggregating line numbers from different files will not
+        overwrite line numbers from different files.
+
+        .. todo:: rename function to getCoveredLineNumbersSourceFile ? or merge
+            with getCoveredLineNumbers by adding a parameter ?
+
+        :returns: List of covered line numbers
+        :rtype: {List[Tuple[str, int]]}
+        """
         source_file_name = self.getSourceFile().getFileName()
         line_numbers = self.getCoveredLineNumbers()
         return set([(source_file_name, line_number) for line_number in line_numbers])
 
+
+    # Tree operation
+
     def constructTree(self):
+        """Create a tree where childrens are the element of the sequence.
+
+        Used in PairSequences to compute distance between two sequences.
+
+        :returns: A tree containing every element of the sequence.
+        :rtype: {AbstractSyntaxTree}
+        """
         tree = AbstractSyntaxTree('__SEQUENCE__')
         for statement in self:
             tree.addChild(statement, True)
         return tree
 
-    def getCoveredLineNumbersCount(self):
-        covered = set()
-        for t in self:
-            covered.update(t.getCoveredLineNumbers())
-        return len(covered)
+    def getAncestors(self):
+        """Return ancestors of first element
+
+        Used only in clone_detection_algorithm.remove_dominated_clones. Depends
+        on AST.getAllStatementSequences.
+
+        .. todo:: Why self[0], and not a set of all ancestors of every statement ?
+        """
+        return self[0].getAncestors()
+
+    def getWeight(self):
+        """Unused
+
+        .. todo:: AST.getCluster does not exist
+        .. todo:: unused
+        """
+        return sum([s.getCluster().getUnifierSize() for s in self._sequence])
 
 
 class PairSequences(object):
@@ -415,6 +592,10 @@ class PairSequences(object):
         return ';\t'.join([str(s) for s in self])
 
     def getWeight(self):
+        """Unused
+
+        .. todo:: unused
+        """
         assert(self[0].getWeight() == self[1].getWeight())
         return self[0].getWeight()
 
@@ -428,6 +609,10 @@ class PairSequences(object):
         return PairSequences([StatementSequence(self[0][first:first + length]), StatementSequence(self[1][first:first + length])])
 
     def getLength(self):
+        """Return length of first sequence
+
+        .. todo:: Is len(self[0]) and len(self[1]) always equal ?
+        """
         return self[0].getLength()
 
     def getMaxCoveredLineNumbersCount(self):

@@ -23,7 +23,14 @@ import compiler
 from .abstract_syntax_tree import AbstractSyntaxTree, SourceFile
 
 
+# TODO: make this extend AbstractSyntaxTree ? This might impact isinstance(node, PythonNodeLeaf)
+# How are leaves represented in ANTLRSourceFile if not with a special node ?
 class PythonNodeLeaf:
+    """Store variable identifiers or numbers
+
+    :param _val: Variable, number identifiers
+    :type _val: str
+    """
     def __init__(self, val):
         self._val = val
 
@@ -56,6 +63,7 @@ def flatten(lst):
     return l
 
 
+# TODO: make these function method of PythonCompilerSourceFile
 def add_childs(childs, r, is_statement, source_file):
     # Calls rec_build_tree on `childs`
     assert isinstance(childs, list)
@@ -121,7 +129,18 @@ class PythonCompilerSourceFile(SourceFile):
         self._setTree(self.rec_build_tree(parsed))
 
     def rec_build_tree(self, node, is_statement=False):
+        """Build an AST from a compiler.ast.Node
 
+        :param node: Compiler node to build the AST from.
+        :type node: Union[None, compiler.ast.Node]
+        :param is_statement: Direct childs of a 'Stmt' node are statements, defaults to False
+        :type is_statement: bool, optional
+        :returns: An AST representing the file.
+        :rtype: {AbstractSyntaxTree}
+        """
+
+        # TODO: how were the `if name == XXX` chosen ?
+        # The doc is available at : https://docs.python.org/2/library/compiler.html
         if isinstance(node, compiler.ast.Node):
             name = node.__class__.__name__
             if name == 'Function':
