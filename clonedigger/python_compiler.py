@@ -16,6 +16,8 @@
 #   You should have received a copy of the GNU General Public License
 #   along with Clone Digger.  If not, see <http://www.gnu.org/licenses/>.
 
+"""python_compiler module"""
+
 """from __future__ import absolute_import"""
 
 import compiler

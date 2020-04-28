@@ -7,7 +7,7 @@ This forks major changes:
 - Refactored (simplified) the way `arguments.py` and CLI options work together
 - All SourceFle using ANTLR inherits from new object `ANTLRSourceFile`
 - Moved out subfunctions
-- Added some documentation
+- Added some documentation (+ sphinx documentation)
 
 available at http://clonedigger.sourceforge.net
 
@@ -46,3 +46,6 @@ Overview of the program:
 ANTLR resources:
 - [ANTLR to XML](https://github.com/RadimBaca/antlr-parse-tree-xml-export)
 - [Python ANTLR grammar](https://github.com/antlr/grammars-v4/tree/master/python/python3-without-actions)
+
+
+![img](../doc/uml/clonedigger_classes_manual.png)

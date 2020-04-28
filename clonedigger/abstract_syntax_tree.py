@@ -229,7 +229,7 @@ class AbstractSyntaxTree(object):
         return len(self._childs)
 
     def addChild(self, child, save_parent=False):
-        """Add a child and set its parent to self is save_parent
+        """Add a child and set its parent to self if save_parent
 
         :param child: Child to add
         :type child: AbstractSyntaxTree
