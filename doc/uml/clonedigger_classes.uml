@@ -1,0 +1,297 @@
+@startuml
+skinparam wrapMessageWidth 80
+skinparam class {
+    BackgroundColor White
+    ArrowColor Grey
+    BorderColor Black
+}
+title clonedigger
+
+package python_compiler {
+
+    class PythonCompilerSourceFile {
+        #List[str] _func_prefixes
+        +int distance_threshold
+        +str extension
+        +List[str] ignored_statements
+        +int size_threshold
+
+        +void __init__(file_name: str, func_prefixes: List[str]
+        +AbstractSyntaxTree rec_build_tree(\nnode: Union[None, compiler.ast.Node], is_statement: bool)
+    }
+    class PythonNodeLeaf {
+        #T _val
+
+        +void __init__(val: T)
+        +str __str__()
+        +str as_string()
+        +T getVal()
+    }
+}
+
+package suffix_tree {
+    class SuffixTree {
+        #_f_code
+        #SuffixTreeNode _node
+
+        +void __init__(f_code: Function[E -> K])
+        #void _add(string: List[E], prevelem: E)
+        +void add(string: List[E])
+        +List[Tuple[List[K], List[K]]] getBestMaxSubstrings(\nthreshold: int, f: Function[K -> int], f_elem: Function[List[E] -> int],\nnode: Optional[SuffixTreeNode], initial_threshold: int)
+    }
+    class StringPosition {
+        +int position
+        +E prevelem
+        +List[E] string
+
+        +void __init__(string, position, prevelem)
+    }
+    class SuffixTreeNode {
+        +List[SuffixTreeNode] childs
+        +List[List[StringPosition]] ending_strings
+        +List[list[StringPosition]] string_positions
+
+        +void __init__()
+    }
+}
+
+package abstract_syntax_tree {
+    class SourceFile {
+        #str _file_name
+        #List[str] _source_lines
+        #AbstractSyntaxTree _tree
+        +int distance_threshold
+        +int size_threshold
+
+        +void __init__(file_name: str)
+        #void _setTree(tree: AbstractSyntaxTree)
+        +str getFileName()
+        +str getSourceLine(n: int)
+        +AbstractSyntaxTree getTree()
+    }
+    class StatementSequence {
+        #List[AbstractSyntaxTree] _sequence
+        #SourceFile _source_file
+
+        +AbstractSyntaxTree __getitem__(*args)
+        +void __init__(sequence: List[AbstractSyntaxTree])
+        +int __len__()
+        +str __str__()
+        +void addStatement(statement: AbstractSyntaxTree)
+        +AbstractSyntaxTree constructTree()
+        +List[AbstractSyntaxTree] getAncestors()
+        +Set[int] getCoveredLineNumbers()
+        +int getCoveredLineNumbersCount()
+        +int getLength()
+        +List[Tuple[str, int]] getLineNumberHashables()
+        +Set[int] getLineNumbers()
+        +SourceFile getSourceFile()
+        +List[str]getSourceLines()
+        +getWeight()
+        +bool isEmpty()
+    }
+    class AbstractSyntaxTree {
+        #List[Union[AbstractSyntaxTree, PythonNodeLeaf]] _childs
+        #int _covered_line_numbers
+        #int _hash
+        #int _height
+        #bool _is_statement
+        #List[int] _line_numbers
+        #_mark
+        #str _name
+        #int _none_count
+        #AbstractSyntaxTree _parent
+        #float _size
+        #SourceFile _source_file
+        +compiler.ast.Node ast_node
+
+        +bool __eq__(tree2: Any)
+        +int __hash__()
+        +void __init__(name: Optional[str], line_numbers=List[int],\nsource_file: Optional[SourceFile])
+        +str __str__()
+        +void addChild(child: AbstractSyntaxTree, save_parent: bool)
+
+        +getAllStatementSequences()
+        +getAncestors()
+        +getChildCount()
+        +getChilds()
+        +getCoveredLineNumbers()
+        +getDCupHash(level)
+        +getFullHash()
+        +getHeight()
+        +getLineNumbers()
+        +getMark()
+        +getName()
+        +getParent()
+        +getSize(ignore_none=True)
+        +getSourceFile()
+        +getSourceLines()
+        +getTokenCount()
+        +isStatement()
+        +markAsStatement(val=True)
+        +propagateCoveredLineNumbers()
+        +propagateHeight()
+        +setMark(mark)
+        +setName(name)
+        +setParent(parent)
+        +storeSize()
+    }
+    class PairSequences {
+        #Tuple[StatementSequence, StatementSequence] _sequences
+
+        +StatementSequence __getitem__(*args)
+        +void __init__(sequences: Tuple[StatementSequence, StatementSequence])
+        +str __str__()
+        +int calcDistance()
+        +int getLength()
+        +int getMaxCoveredLineNumbersCount()
+        +float getWeight()
+        +PairSequences subSequence(first: int, length: int)
+    }
+}
+
+package anti_unification {
+
+    class Substitution {
+        #Dict[AbstractSyntaxTree, AbstractSyntaxTree] _map
+
+        +void __init__(initial_value: Optional[Dict[AbstractSyntaxTree, AbstractSyntaxTree]])
+        +Dict[AbstractSyntaxTree, AbstractSyntaxTree] getMap()
+        +int getSize()
+        +AbstractSyntaxTree substitute(tree, without_copying=False)
+    }
+    class Cluster {
+        #int _cluster_number
+        #int _max_covered_lines
+        #int _n
+        #List[AbstractSyntaxTree] _trees
+        #AbstractSyntaxTree _unifier_tree
+
+        +void __init__(tree: AbstractSyntaxTree)
+        +void addWithoutUnification(tree: AbstractSyntaxTree)
+        +void eraseAllTrees()
+        +int getAddCost(tree: AbstractSyntaxTree)
+        +int getCount()
+        +int getMaxCoveredLines()
+        +int getUnifierSize()
+        +AbstractSyntaxTree getUnifierTree()
+        +void unify(tree: AbstractSyntaxTree)
+    }
+    class FreeVariable {
+        +void __init__()
+    }
+    class Unifier {
+        #List[Substitution] _substitutions
+        #AbstractSyntaxTree _unifier
+
+        +void __init__(t1: AbstractSyntaxTree, t2: AbstractSyntaxTree,\nignore_parametrization: bool)
+        #Tuple[AbstractSyntaxTree, Tuple[Substitution, Substitution]] _combineSubs(\nnode: AbstractSyntaxTree, s: Substitution, t: Substitution, ignore_parametrization: bool)
+        #Tuple[AbstractSyntaxTree, Tuple[Substitution, Substitution]] _unify(\nnode1: AbstractSyntaxTree, node2: AbstractSyntaxTree, ignore_parametrization: bool)
+        +int getSize()
+        +Tuple[Substitution, Substitution] getSubstitutions()
+        +AbstractSyntaxTree getUnifier()
+    }
+}
+
+package reports {
+    class NewAsString {
+        +s
+
+        +__call__()
+        +__init__(s)
+    }
+    class Report {
+        #_clones
+        #_error_info
+        #_file_names
+        #_timers
+        +all_source_lines_count
+        +covered_source_lines_count
+
+        +__init__()
+        +addClone(clone)
+        +addErrorInformation(error_info)
+        +addFileName(file_name)
+        +getTimerValues()
+        +getTotalTime()
+        +sortByCloneSize()
+        +startTimer(descr)
+        +stopTimer(descr=u'')
+    }
+    class HTMLReport {
+        #_mark_to_statement_hash
+        +very_strange_const
+
+        +__init__()
+        +setMarkToStatementHash(mark_to_statement_hash)
+        +writeReport(file_name)
+    }
+    class CPDXMLReport {
+        #_mark_to_statement_hash
+        +__init__()
+        +setMarkToStatementHash(mark_to_statement_hash)
+        +writeReport(file_name)
+    }
+}
+
+package antlr_sourcefile {
+    class ANTLRSourceFile {
+        +str extension
+        +str antlr_run
+        +str producer_type
+
+        +__init__(file_name)
+        +parse(file_name)
+    }
+    class JavaANTLRSourceFile {
+        +__init__(file_name)
+    }
+    class JsANTLRSourceFile {
+        +__init__(file_name)
+    }
+    class LuaANTLRSourceFile {
+        +__init__(file_name)
+    }
+    class ExpatHandler {
+        +parent
+        +stack
+
+        +__init__(start_node, parent)
+        +end_element(name)
+        +start_element(xml_node_name, attrs)
+    }
+}
+
+SourceFile <|-- PythonCompilerSourceFile
+SourceFile <|-- ANTLRSourceFile
+
+ANTLRSourceFile o-- AbstractSyntaxTree
+ANTLRSourceFile <|-- JavaANTLRSourceFile
+ANTLRSourceFile <|-- JsANTLRSourceFile
+ANTLRSourceFile <|-- LuaANTLRSourceFile
+
+
+Report <|-- HTMLReport
+Report <|-- CPDXMLReport
+
+AbstractSyntaxTree *-- AbstractSyntaxTree
+AbstractSyntaxTree *-- PythonNodeLeaf
+AbstractSyntaxTree o-- SourceFile
+AbstractSyntaxTree <|-- FreeVariable
+
+PairSequences o-- StatementSequence
+StatementSequence o-- SourceFile
+StatementSequence o-- AbstractSyntaxTree
+
+SuffixTree *-- SuffixTreeNode
+SuffixTreeNode *-- StringPosition
+
+Unifier o-- AbstractSyntaxTree
+
+SourceFile o-- AbstractSyntaxTree
+
+Cluster o-- AbstractSyntaxTree
+
+Substitution o-- AbstractSyntaxTree
+
+@enduml

@@ -1,0 +1,42 @@
+@startuml
+
+skinparam package {
+    BackgroundColor White
+    ArrowColor Grey
+    BorderColor Black
+}
+skinparam packageStyle frame
+title clonedigger
+package clonedigger.python_compiler {
+}
+package clonedigger.clone_detection_algorithm {
+}
+package clonedigger.suffix_tree {
+}
+package clonedigger.abstract_syntax_tree {
+}
+package clonedigger.anti_unification {
+}
+package clonedigger.reports {
+}
+package clonedigger {
+}
+package clonedigger.ast_suppliers {
+}
+package clonedigger.antlr_sourcefile {
+}
+package clonedigger.clonedigger {
+}
+package clonedigger.arguments {
+}
+package clonedigger.__python_compiler_ast {
+}
+clonedigger.abstract_syntax_tree +-- clonedigger.python_compiler
+clonedigger.abstract_syntax_tree +-- clonedigger.clone_detection_algorithm
+clonedigger.anti_unification +-- clonedigger.clone_detection_algorithm
+clonedigger.abstract_syntax_tree +-- clonedigger.anti_unification
+clonedigger.abstract_syntax_tree +-- clonedigger.reports
+clonedigger.abstract_syntax_tree +-- clonedigger.antlr_sourcefile
+clonedigger.abstract_syntax_tree +-- clonedigger.__python_compiler_ast
+
+@enduml

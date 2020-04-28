@@ -1,0 +1,46 @@
+digraph "classes" {
+charset="utf-8"
+rankdir=BT
+"0" [label="{ANTLRSourceFile|_tree\lantlr_run : NoneType\ldistance_threshold : NoneType\lextension : NoneType\lproducer_type : NoneType\lsize_threshold : NoneType\l|__init__(file_name)\lparse(file_name)\l}", shape="record"];
+"1" [label="{AbstractSyntaxTree|_childs : list\l_covered_line_numbers : NoneType, set\l_hash : NoneType\l_height : int, NoneType\l_is_statement : bool\l_line_numbers : list\l_mark : NoneType\l_name : NoneType\l_none_count : int, NoneType\l_parent : NoneType\l_size : int, NoneType\l_source_file : NoneType\last_node\l|__eq__(tree2)\l__hash__()\l__init__(name, line_numbers, source_file)\l__str__()\laddChild(child, save_parent)\lgetAllStatementSequences()\lgetAncestors()\lgetChildCount()\lgetChilds()\lgetCoveredLineNumbers()\lgetDCupHash(level)\lgetFullHash()\lgetHeight()\lgetLineNumbers()\lgetMark()\lgetName()\lgetParent()\lgetSize(ignore_none)\lgetSourceFile()\lgetSourceLines()\lgetTokenCount()\lisStatement()\lmarkAsStatement(val)\lpropagateCoveredLineNumbers()\lpropagateHeight()\lsetMark(mark)\lsetName(name)\lsetParent(parent)\lstoreSize()\l}", shape="record"];
+"2" [label="{CPDXMLReport|_mark_to_statement_hash : NoneType\l|__init__()\lsetMarkToStatementHash(mark_to_statement_hash)\lwriteReport(file_name)\l}", shape="record"];
+"3" [label="{Cluster|_cluster_number\l_max_covered_lines : int\l_n : int\l_trees : list\l_unifier_tree : NoneType\l|__init__(tree)\laddWithoutUnification(tree)\leraseAllTrees()\lgetAddCost(tree)\lgetCount()\lgetMaxCoveredLines()\lgetUnifierSize()\lgetUnifierTree()\lunify(tree)\l}", shape="record"];
+"4" [label="{Elem|_code\l|__init__(code)\l__str__()\lgetCode()\l}", shape="record"];
+"5" [label="{ExpatHandler|parent\lstack : list\l|__init__(start_node, parent)\lend_element(name)\lstart_element(xml_node_name, attrs)\l}", shape="record"];
+"6" [label="{FreeVariable|\l|__init__()\l}", shape="record"];
+"7" [label="{HTMLReport|_mark_to_statement_hash : NoneType\lvery_strange_const : str\l|__init__()\lsetMarkToStatementHash(mark_to_statement_hash)\lwriteReport(file_name)\l}", shape="record"];
+"8" [label="{JavaANTLRSourceFile|antlr_run : str\ldistance_threshold : int\lextension : str\lproducer_type : str\lsize_threshold : int\l|__init__(file_name)\l}", shape="record"];
+"9" [label="{JsANTLRSourceFile|antlr_run : str\ldistance_threshold : int\lextension : str\lproducer_type : str\lsize_threshold : int\l|__init__(file_name)\l}", shape="record"];
+"10" [label="{LuaANTLRSourceFile|antlr_run : str\ldistance_threshold : int\lextension : str\lproducer_type : str\lsize_threshold : int\l|__init__(file_name)\l}", shape="record"];
+"11" [label="{NewAsString|s\l|__call__()\l__init__(s)\l}", shape="record"];
+"12" [label="{PairSequences|_sequences\l|__getitem__()\l__init__(sequences)\l__str__()\lcalcDistance()\lgetLength()\lgetMaxCoveredLineNumbersCount()\lgetWeight()\lsubSequence(first, length)\l}", shape="record"];
+"13" [label="{PythonCompilerSourceFile|_func_prefixes : tuple\ldistance_threshold : int\lextension : str\lignored_statements : list\lsize_threshold : int\l|__init__(file_name, func_prefixes)\lrec_build_tree(node, is_statement)\l}", shape="record"];
+"14" [label="{PythonCompilerSourceFile|_func_prefixes : tuple\ldistance_threshold : int\lextension : str\lignored_statements : list\lsize_threshold : int\l|__init__(file_name, func_prefixes)\lrec_build_tree(node, is_statement)\l}", shape="record"];
+"15" [label="{PythonNodeLeaf|_val\l|__init__(val)\l__str__()\las_string()\lgetVal()\l}", shape="record"];
+"16" [label="{PythonNodeLeaf|_val\l|__init__(val)\l__str__()\las_string()\lgetVal()\l}", shape="record"];
+"17" [label="{Report|_clones : list\l_error_info : list\l_file_names : list\l_timers : list\lall_source_lines_count : int\lcovered_source_lines_count : int\l|__init__()\laddClone(clone)\laddErrorInformation(error_info)\laddFileName(file_name)\lgetTimerValues()\lgetTotalTime()\lsortByCloneSize()\lstartTimer(descr)\lstopTimer(descr)\l}", shape="record"];
+"18" [label="{SourceFile|_file_name\l_source_lines\l_tree : NoneType\ldistance_threshold : int\lsize_threshold : int\l|__init__(file_name)\l_setTree(tree)\lgetFileName()\lgetSourceLine(n)\lgetTree()\l}", shape="record"];
+"19" [label="{StatementSequence|_sequence : list\l_source_file : NoneType\l|__getitem__()\l__init__(sequence)\l__len__()\l__str__()\laddStatement(statement)\lconstructTree()\lgetAncestors()\lgetCoveredLineNumbers()\lgetCoveredLineNumbersCount()\lgetLength()\lgetLineNumberHashables()\lgetLineNumbers()\lgetSourceFile()\lgetSourceLines()\lgetWeight()\lisEmpty()\l}", shape="record"];
+"20" [label="{StringPosition|position\lprevelem\lstring\l|__init__(string, position, prevelem)\l}", shape="record"];
+"21" [label="{Substitution|_map : NoneType, dict\l|__init__(initial_value)\lgetMap()\lgetSize()\lsubstitute(tree, without_copying)\l}", shape="record"];
+"22" [label="{SuffixTree|_f_code : NoneType\l_node\l|__init__(f_code)\l_add(string, prevelem)\ladd(string)\lgetBestMaxSubstrings(threshold, f, f_elem, node, initial_threshold)\l}", shape="record"];
+"23" [label="{SuffixTreeNode|childs : dict\lending_strings : list\lstring_positions : list\l|__init__()\l}", shape="record"];
+"24" [label="{Unifier|_substitutions : tuple\l_unifier\l|__init__(t1, t2, ignore_parametrization)\l_combineSubs(node, s, t, ignore_parametrization)\l_unify(node1, node2, ignore_parametrization)\lgetSize()\lgetSubstitutions()\lgetUnifier()\l}", shape="record"];
+"0" -> "18" [arrowhead="empty", arrowtail="none"];
+"2" -> "17" [arrowhead="empty", arrowtail="none"];
+"6" -> "1" [arrowhead="empty", arrowtail="none"];
+"7" -> "17" [arrowhead="empty", arrowtail="none"];
+"8" -> "0" [arrowhead="empty", arrowtail="none"];
+"9" -> "0" [arrowhead="empty", arrowtail="none"];
+"10" -> "0" [arrowhead="empty", arrowtail="none"];
+"13" -> "18" [arrowhead="empty", arrowtail="none"];
+"14" -> "18" [arrowhead="empty", arrowtail="none"];
+"1" -> "0" [arrowhead="diamond", arrowtail="none", fontcolor="green", label="_tree", style="solid"];
+"6" -> "3" [arrowhead="diamond", arrowtail="none", fontcolor="green", label="_unifier_tree", style="solid"];
+"6" -> "24" [arrowhead="diamond", arrowtail="none", fontcolor="green", label="_unifier", style="solid"];
+"15" -> "1" [arrowhead="diamond", arrowtail="none", fontcolor="green", label="ast_node", style="solid"];
+"15" -> "1" [arrowhead="diamond", arrowtail="none", fontcolor="green", label="ast_node", style="solid"];
+"16" -> "1" [arrowhead="diamond", arrowtail="none", fontcolor="green", label="ast_node", style="solid"];
+"16" -> "1" [arrowhead="diamond", arrowtail="none", fontcolor="green", label="ast_node", style="solid"];
+"23" -> "22" [arrowhead="diamond", arrowtail="none", fontcolor="green", label="_node", style="solid"];
+}
