@@ -1,0 +1,539 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>clonedigger.reports &#8212; Clone Digger  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for clonedigger.reports</h1><div class="highlight"><pre>
+<span></span><span class="c1">#    Copyright 2008 Peter Bulychev</span>
+<span class="c1">#</span>
+<span class="c1">#    This file is part of Clone Digger.</span>
+<span class="c1">#</span>
+<span class="c1">#    Clone Digger is free software: you can redistribute it and/or modify</span>
+<span class="c1">#    it under the terms of the GNU General Public License as published by</span>
+<span class="c1">#    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1">#    (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1">#    Clone Digger is distributed in the hope that it will be useful,</span>
+<span class="c1">#    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1">#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c1">#    GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1">#   You should have received a copy of the GNU General Public License</span>
+<span class="c1">#   along with Clone Digger.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot;reports module&quot;&quot;&quot;</span>
+
+<span class="sd">&quot;&quot;&quot;from __future__ import print_function</span>
+<span class="sd">from __future__ import absolute_import</span>
+<span class="sd">from __future__ import unicode_literals</span>
+<span class="sd">from __future__ import division</span>
+<span class="sd">from past.builtins import cmp</span>
+<span class="sd">from future import standard_library</span>
+<span class="sd">standard_library.install_aliases()</span>
+<span class="sd">from builtins import str</span>
+<span class="sd">from builtins import range</span>
+<span class="sd">from builtins import *</span>
+<span class="sd">from builtins import object&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">difflib</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">from</span> <span class="nn">cgi</span> <span class="kn">import</span> <span class="n">escape</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">arguments</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">anti_unification</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">python_compiler</span>
+<span class="kn">from</span> <span class="nn">.abstract_syntax_tree</span> <span class="kn">import</span> <span class="n">AbstractSyntaxTree</span>
+
+
+<div class="viewcode-block" id="Report"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.Report">[docs]</a><span class="k">class</span> <span class="nc">Report</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_error_info</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_clones</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_timers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covered_source_lines_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">all_source_lines_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="Report.addFileName"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.Report.addFileName">[docs]</a>    <span class="k">def</span> <span class="nf">addFileName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Report.addErrorInformation"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.Report.addErrorInformation">[docs]</a>    <span class="k">def</span> <span class="nf">addErrorInformation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_info</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_error_info</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">error_info</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Report.addClone"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.Report.addClone">[docs]</a>    <span class="k">def</span> <span class="nf">addClone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">clone</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_clones</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">clone</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Report.sortByCloneSize"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.Report.sortByCloneSize">[docs]</a>    <span class="k">def</span> <span class="nf">sortByCloneSize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_clones</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clones</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">getMaxCoveredLineNumbersCount</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Report.startTimer"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.Report.startTimer">[docs]</a>    <span class="k">def</span> <span class="nf">startTimer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">descr</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_timers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">descr</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span> <span class="n">time</span><span class="o">.</span><span class="n">ctime</span><span class="p">()])</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Report.stopTimer"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.Report.stopTimer">[docs]</a>    <span class="k">def</span> <span class="nf">stopTimer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">descr</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_timers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Report.getTimerValues"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.Report.getTimerValues">[docs]</a>    <span class="k">def</span> <span class="nf">getTimerValues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timers</span></div>
+
+<div class="viewcode-block" id="Report.getTotalTime"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.Report.getTotalTime">[docs]</a>    <span class="k">def</span> <span class="nf">getTotalTime</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">([</span><span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getTimerValues</span><span class="p">()])</span></div></div>
+
+
+<div class="viewcode-block" id="CPDXMLReport"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.CPDXMLReport">[docs]</a><span class="k">class</span> <span class="nc">CPDXMLReport</span><span class="p">(</span><span class="n">Report</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">Report</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mark_to_statement_hash</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="CPDXMLReport.setMarkToStatementHash"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.CPDXMLReport.setMarkToStatementHash">[docs]</a>    <span class="k">def</span> <span class="nf">setMarkToStatementHash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mark_to_statement_hash</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mark_to_statement_hash</span> <span class="o">=</span> <span class="n">mark_to_statement_hash</span></div>
+
+<div class="viewcode-block" id="CPDXMLReport.writeReport"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.CPDXMLReport.writeReport">[docs]</a>    <span class="k">def</span> <span class="nf">writeReport</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&lt;pmd-cpd&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">clone</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clones</span><span class="p">:</span>
+                <span class="n">token_numbers</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sum</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">getTokenCount</span><span class="p">()</span>
+                                      <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">clone</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&lt;duplication lines=&quot;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">max</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">clone</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">(</span>
+                <span class="p">)))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]))</span> <span class="o">+</span> <span class="s1">&#39;&quot; tokens=&quot;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">token_numbers</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;&quot;&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&lt;file line=&quot;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="nb">min</span><span class="p">(</span><span class="n">clone</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">(</span>
+                    <span class="p">)))</span> <span class="o">+</span> <span class="s1">&#39;&quot; path=&quot;&#39;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">clone</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">getSourceFile</span><span class="p">()</span><span class="o">.</span><span class="n">getFileName</span><span class="p">())</span> <span class="o">+</span> <span class="s1">&#39;&quot;/&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&lt;codefragment&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&lt;![CDATA[</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">clone</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getSourceLines</span><span class="p">():</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;]]&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;-CLONEDIGGER REMOVED CDATAEND-&#39;</span><span class="p">))</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;]]&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&lt;/codefragment&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&lt;/duplication&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&lt;/pmd-cpd&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="format_line_code"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.format_line_code">[docs]</a><span class="k">def</span> <span class="nf">format_line_code</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;&amp;nbsp; &#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s1">&#39;&lt;span style=&quot;font-family: monospace;&quot;&gt;</span><span class="si">%s</span><span class="s1">&lt;/span&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="p">,)</span></div>
+
+
+<div class="viewcode-block" id="highlight"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.highlight">[docs]</a><span class="k">def</span> <span class="nf">highlight</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;&lt;span style=&quot;color: rgb(255, 0, 0);&quot;&gt;&#39;</span> <span class="o">+</span> <span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;&lt;/span&gt;&#39;</span></div>
+
+
+<div class="viewcode-block" id="NewAsString"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.NewAsString">[docs]</a><span class="k">class</span> <span class="nc">NewAsString</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="n">highlight</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">s</span></div>
+
+
+<div class="viewcode-block" id="set_as_string_node_parent"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.set_as_string_node_parent">[docs]</a><span class="k">def</span> <span class="nf">set_as_string_node_parent</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">AbstractSyntaxTree</span><span class="p">):</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">getParent</span><span class="p">()</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">NewAsString</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">ast_node</span><span class="o">.</span><span class="n">as_string</span><span class="p">())</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">ast_node</span><span class="o">.</span><span class="n">as_string</span> <span class="o">=</span> <span class="n">n</span></div>
+
+
+<div class="viewcode-block" id="rec_correct_as_string"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.rec_correct_as_string">[docs]</a><span class="k">def</span> <span class="nf">rec_correct_as_string</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="n">t2</span><span class="p">,</span> <span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">):</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">t1</span> <span class="ow">in</span> <span class="n">s1</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">t2</span> <span class="ow">in</span> <span class="n">s2</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="n">t2</span><span class="p">):</span>
+            <span class="n">set_as_string_node_parent</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t1</span><span class="o">.</span><span class="n">getChilds</span><span class="p">())</span> <span class="o">==</span>
+           <span class="nb">len</span><span class="p">(</span><span class="n">t2</span><span class="o">.</span><span class="n">getChilds</span><span class="p">()))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t1</span><span class="o">.</span><span class="n">getChilds</span><span class="p">())):</span>
+        <span class="n">c1</span> <span class="o">=</span> <span class="n">t1</span><span class="o">.</span><span class="n">getChilds</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">c2</span> <span class="o">=</span> <span class="n">t2</span><span class="o">.</span><span class="n">getChilds</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">rec_correct_as_string</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="use_diff"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.use_diff">[docs]</a><span class="k">def</span> <span class="nf">use_diff</span><span class="p">(</span><span class="n">statements</span><span class="p">,</span> <span class="n">indentations</span><span class="p">,</span> <span class="n">source_lines</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">source_line</span> <span class="ow">in</span> <span class="n">statements</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">getSourceLines</span><span class="p">():</span>
+            <span class="n">indent1</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s1">&#39;^\s*&#39;</span><span class="p">,</span> <span class="n">source_line</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">indent2</span> <span class="o">=</span> <span class="n">indent1</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="s1">&#39; &#39;</span><span class="p">)</span>
+            <span class="n">source_line</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span>
+                <span class="s1">&#39;^&#39;</span> <span class="o">+</span> <span class="n">indent1</span><span class="p">,</span> <span class="n">indentations</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">indent2</span><span class="p">)</span> <span class="o">*</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">source_line</span><span class="p">)</span>
+            <span class="n">source_lines</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">source_line</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">diff_highlight</span><span class="p">(</span>
+        <span class="p">[(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">source_lines</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="p">[</span><span class="n">format_line_code</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+        <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;BR&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">HTMLReport</span><span class="o">.</span><span class="n">very_strange_const</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">)</span>
+         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">anti_unification</span><span class="o">.</span><span class="n">Unifier</span><span class="p">(</span>
+        <span class="n">statements</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">statements</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">d</span><span class="p">,</span> <span class="n">u</span></div>
+
+
+<div class="viewcode-block" id="diff_highlight"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.diff_highlight">[docs]</a><span class="k">def</span> <span class="nf">diff_highlight</span><span class="p">(</span><span class="n">seqs</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">difflib</span><span class="o">.</span><span class="n">SequenceMatcher</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">==</span> <span class="s1">&#39;&lt;BR&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">set_seqs</span><span class="p">(</span><span class="n">seqs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">seqs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">blocks</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">get_matching_blocks</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">((</span><span class="n">blocks</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">blocks</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)):</span>
+        <span class="n">blocks</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span> <span class="o">+</span> <span class="n">blocks</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">blocks</span><span class="p">)):</span>
+        <span class="n">block</span> <span class="o">=</span> <span class="n">blocks</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
+            <span class="n">r</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">escape</span><span class="p">(</span><span class="n">seqs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                           <span class="p">[</span><span class="n">block</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span><span class="n">block</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">block</span><span class="p">[</span><span class="mi">2</span><span class="p">]])</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
+            <span class="n">nextblock</span> <span class="o">=</span> <span class="n">blocks</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
+                <span class="n">r</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="s1">&#39;&lt;span&#39;</span> <span class="o">+</span> <span class="n">HTMLReport</span><span class="o">.</span><span class="n">very_strange_const</span> <span class="o">+</span> <span class="s1">&#39;style=&quot;color:rgb(255,0,0);&quot;&gt;</span><span class="si">%s</span><span class="s1">&lt;/span&gt;&#39;</span> <span class="o">%</span>\
+                    <span class="p">(</span><span class="n">escape</span><span class="p">(</span><span class="n">seqs</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">block</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">block</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span><span class="n">nextblock</span><span class="p">[</span><span class="n">j</span><span class="p">]]),)</span>
+    <span class="k">return</span> <span class="n">r</span></div>
+
+
+<div class="viewcode-block" id="HTMLReport"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.HTMLReport">[docs]</a><span class="k">class</span> <span class="nc">HTMLReport</span><span class="p">(</span><span class="n">Report</span><span class="p">):</span>
+    <span class="n">very_strange_const</span> <span class="o">=</span> <span class="s1">&#39;VERY_STRANGE_CONST&#39;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">Report</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mark_to_statement_hash</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="HTMLReport.setMarkToStatementHash"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.HTMLReport.setMarkToStatementHash">[docs]</a>    <span class="k">def</span> <span class="nf">setMarkToStatementHash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mark_to_statement_hash</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mark_to_statement_hash</span> <span class="o">=</span> <span class="n">mark_to_statement_hash</span></div>
+
+<div class="viewcode-block" id="HTMLReport.writeReport"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.reports.HTMLReport.writeReport">[docs]</a>    <span class="k">def</span> <span class="nf">writeReport</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
+        <span class="c1"># TODO REWRITE! This function code was created in a hurry</span>
+        <span class="n">eclipse_start</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&lt;!--ECLIPSE START--&gt;&#39;</span>
+        <span class="n">eclipse_end</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&lt;!--ECLIPSE END--&gt;&#39;</span>
+
+        <span class="n">errors_info</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;&lt;P&gt; &lt;FONT COLOR=RED&gt; </span><span class="si">%s</span><span class="s1"> &lt;/FONT&gt; &lt;/P&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="n">error_info</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;BR&gt;&#39;</span><span class="p">),)</span> <span class="k">for</span> <span class="n">error_info</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_error_info</span><span class="p">])</span>
+
+        <span class="n">clone_descriptions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">clone_i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clones</span><span class="p">)):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">clone</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clones</span><span class="p">[</span><span class="n">clone_i</span><span class="p">]</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;&lt;P&gt;&#39;</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;B&gt;Clone # </span><span class="si">%d</span><span class="s1">&lt;/B&gt;&lt;BR&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">clone_i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,)</span>
+                <span class="c1"># s = &#39;&lt;P&gt; Clone detected in source files &quot;%s&quot; and &quot;%s&quot; &lt;BR&gt;\n&#39; % (</span>
+                <span class="c1">#     sequences[0].getSourceFile().getFileName(),</span>
+                <span class="c1">#     sequences[1].getSourceFile().getFileName())</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;Distance between two fragments = </span><span class="si">%d</span><span class="s1"> &lt;BR&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">clone</span><span class="o">.</span><span class="n">calcDistance</span><span class="p">())</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;Clone size = &#39;</span> <span class="o">+</span> \
+                    <span class="nb">str</span><span class="p">(</span><span class="nb">max</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">clone</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">()))</span>
+                             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]))</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;TABLE NOWRAP WIDTH=100% BORDER=1&gt;&#39;</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="n">eclipse_start</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;TR&gt;&#39;</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;TD&gt; &lt;a href=&quot;clone://</span><span class="si">%s</span><span class="s1">?</span><span class="si">%d</span><span class="s1">&amp;</span><span class="si">%d</span><span class="s1">&quot;&gt; Go to this fragment in &#39;</span>\
+                         <span class="s1">&#39;Eclipse &lt;/a&gt; &lt;/TD&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">clone</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">getSourceFile</span><span class="p">()</span><span class="o">.</span><span class="n">getFileName</span><span class="p">(),</span>
+                                                 <span class="nb">min</span><span class="p">(</span><span class="n">clone</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">()),</span>
+                                                 <span class="nb">max</span><span class="p">(</span><span class="n">clone</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">()))</span>
+                    <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;TD&gt;&lt;/TD&gt;&#39;</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;/TR&gt;&#39;</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="n">eclipse_end</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;TD&gt;&#39;</span>
+                    <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;Source file &quot;</span><span class="si">%s</span><span class="s1">&quot;&lt;BR&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="n">clone</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">getSourceFile</span><span class="p">()</span><span class="o">.</span><span class="n">getFileName</span><span class="p">(),)</span>
+                    <span class="k">if</span> <span class="n">clone</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">()</span> <span class="o">==</span> <span class="p">[]:</span>
+                        <span class="c1"># TODO remove after...</span>
+                        <span class="n">pdb</span><span class="o">.</span><span class="n">set_trace</span><span class="p">()</span>
+                    <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;The first line is </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="nb">min</span><span class="p">(</span><span class="n">clone</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">())</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,)</span>
+                    <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;/TD&gt;&#39;</span>
+                    <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;TD&gt;&lt;/TD&gt;&#39;</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;/TR&gt;&#39;</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">clone</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getLength</span><span class="p">()):</span>
+                    <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;TR&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                    <span class="n">t</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">statements</span> <span class="o">=</span> <span class="p">[</span><span class="n">clone</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span>
+
+                    <span class="c1"># preparation of indentation</span>
+                    <span class="n">indentations</span> <span class="o">=</span> <span class="p">(</span><span class="nb">set</span><span class="p">(),</span> <span class="nb">set</span><span class="p">())</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="k">for</span> <span class="n">source_line</span> <span class="ow">in</span> <span class="n">statements</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">getSourceLines</span><span class="p">():</span>
+                            <span class="n">indentations</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+                                <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s1">&#39;^\s*&#39;</span><span class="p">,</span> <span class="n">source_line</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="s1">&#39; &#39;</span><span class="p">)</span>
+                            <span class="p">)</span>
+                    <span class="n">indentations</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="nb">list</span><span class="p">(</span><span class="n">indentations</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                        <span class="nb">list</span><span class="p">(</span><span class="n">indentations</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+                    <span class="n">indentations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+                    <span class="n">indentations</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+                    <span class="n">source_lines</span> <span class="o">=</span> <span class="p">([],</span> <span class="p">[])</span>
+
+                    <span class="k">if</span> <span class="n">arguments</span><span class="o">.</span><span class="n">use_diff</span><span class="p">:</span>
+                        <span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span> <span class="o">=</span> <span class="n">use_diff</span><span class="p">(</span><span class="n">statements</span><span class="p">,</span> <span class="n">indentations</span><span class="p">,</span> <span class="n">source_lines</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">statements</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">statements</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                            <span class="n">u</span> <span class="o">=</span> <span class="n">anti_unification</span><span class="o">.</span><span class="n">Unifier</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+                            <span class="n">rec_correct_as_string</span><span class="p">(</span>
+                                <span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">,</span>
+                                <span class="nb">list</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">getSubstitutions</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+                                <span class="nb">list</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">getSubstitutions</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+                            <span class="n">d</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+                            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+                                <span class="n">d</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">statements</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">ast_node</span><span class="o">.</span><span class="n">as_string</span><span class="p">()</span>
+
+                                <span class="n">lines</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                                <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)):</span>
+                                    <span class="n">temp_line</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                                    <span class="n">jj</span> <span class="o">=</span> <span class="mi">0</span>
+                                    <span class="k">try</span><span class="p">:</span>
+                                        <span class="k">while</span> <span class="n">lines</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="n">jj</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39; &#39;</span><span class="p">:</span>
+                                            <span class="n">temp_line</span> <span class="o">+=</span> <span class="s1">&#39;&amp;nbsp;&#39;</span>
+                                            <span class="n">jj</span> <span class="o">+=</span> <span class="mi">1</span>
+                                    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+                                        <span class="c1"># suppress errors if line has no leading spaces</span>
+                                        <span class="k">pass</span>
+                                    <span class="n">temp_line</span> <span class="o">+=</span> <span class="n">lines</span><span class="p">[</span><span class="n">ii</span><span class="p">][</span><span class="n">jj</span><span class="p">:]</span>
+                                    <span class="n">lines</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_line</span>
+                                <span class="n">d</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+
+                                <span class="n">d</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;BR&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;The following error occured during highlighting&#39;</span>
+                                  <span class="s1">&#39;of differences on the AST level:&#39;</span><span class="p">)</span>
+                            <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;using diff highlight&#39;</span><span class="p">)</span>
+                            <span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span> <span class="o">=</span> <span class="n">use_diff</span><span class="p">(</span><span class="n">statements</span><span class="p">,</span> <span class="n">indentations</span><span class="p">,</span> <span class="n">source_lines</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
+                        <span class="n">t</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;TD&gt;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">d</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;&lt;/TD&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">u</span><span class="o">.</span><span class="n">getSize</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;RED&#39;</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;AQUA&#39;</span>
+                    <span class="n">s</span> <span class="o">+=</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> \
+                        <span class="s1">&#39;&lt;TD style=&quot;width: 10px;&quot; BGCOLOR=</span><span class="si">%s</span><span class="s1">&gt; &lt;/TD&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                            <span class="n">color</span><span class="p">,)</span> <span class="o">+</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;/TR&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="n">s</span> <span class="o">+=</span> <span class="s1">&#39;&lt;/TABLE&gt; &lt;/P&gt; &lt;HR&gt;&#39;</span>
+                <span class="n">clone_descriptions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Clone info can&#39;t be written to the report. &quot;</span><span class="p">)</span>
+                <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
+
+        <span class="n">descr</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;&lt;P&gt;Source files: </span><span class="si">%d</span><span class="s2">&lt;/P&gt;</span>
+<span class="s2">        &lt;a href = &quot;javascript:unhide(&#39;files&#39;);&quot;&gt;Click here to show/hide file names&lt;/a&gt;</span>
+<span class="s2">        &lt;div id=&quot;files&quot; class=&quot;hidden&quot;&gt;&lt;P&gt;&lt;B&gt;Source files:&lt;/B&gt;&lt;BR&gt;</span><span class="si">%s</span><span class="s2">&lt;/P&gt;&lt;/div&gt;</span>
+<span class="s2">        &lt;P&gt;Clones detected: </span><span class="si">%d</span><span class="s2">&lt;/P&gt;</span>
+<span class="s2">        &lt;P&gt;</span><span class="si">%d</span><span class="s2"> of </span><span class="si">%d</span><span class="s2"> lines are duplicates (</span><span class="si">%.2f%%</span><span class="s2">) &lt;/P&gt;</span>
+<span class="s2">&lt;P&gt;</span>
+<span class="s2">&lt;B&gt;Parameters&lt;BR&gt; &lt;/B&gt;</span>
+<span class="s2">clustering_threshold = </span><span class="si">%d</span><span class="s2">&lt;BR&gt;</span>
+<span class="s2">distance_threshold = </span><span class="si">%d</span><span class="s2">&lt;BR&gt;</span>
+<span class="s2">size_threshold = </span><span class="si">%d</span><span class="s2">&lt;BR&gt;</span>
+<span class="s2">hashing_depth = </span><span class="si">%d</span><span class="s2">&lt;BR&gt;</span>
+<span class="s2">clusterize_using_hash = </span><span class="si">%s</span><span class="s2">&lt;BR&gt;</span>
+<span class="s2">clusterize_using_dcup = </span><span class="si">%s</span><span class="s2">&lt;BR&gt;</span>
+<span class="s2">&lt;/P&gt;</span>
+<span class="s2">        &quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_file_names</span><span class="p">),</span> <span class="s1">&#39;, &lt;BR&gt;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_file_names</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clones</span><span class="p">),</span>
+               <span class="bp">self</span><span class="o">.</span><span class="n">covered_source_lines_count</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_source_lines_count</span><span class="p">,</span>
+               <span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_source_lines_count</span> <span class="ow">and</span> <span class="mi">100</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">100</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">covered_source_lines_count</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">all_source_lines_count</span><span class="p">),</span>
+               <span class="n">arguments</span><span class="o">.</span><span class="n">clustering_threshold</span><span class="p">,</span> <span class="n">arguments</span><span class="o">.</span><span class="n">distance_threshold</span><span class="p">,</span>
+               <span class="n">arguments</span><span class="o">.</span><span class="n">size_threshold</span><span class="p">,</span> <span class="n">arguments</span><span class="o">.</span><span class="n">hashing_depth</span><span class="p">,</span>
+               <span class="nb">str</span><span class="p">(</span><span class="n">arguments</span><span class="o">.</span><span class="n">clusterize_using_hash</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">arguments</span><span class="o">.</span><span class="n">clusterize_using_dcup</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">arguments</span><span class="o">.</span><span class="n">print_time</span><span class="p">:</span>
+            <span class="n">timings</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="n">timings</span> <span class="o">+=</span> <span class="s1">&#39;&lt;B&gt;Time elapsed&lt;/B&gt;&lt;BR&gt;&#39;</span>
+            <span class="n">timings</span> <span class="o">+=</span> <span class="s1">&#39;&lt;BR&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> : </span><span class="si">%.2f</span><span class="s1"> seconds&#39;</span> <span class="o">%</span>
+                                      <span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timers</span><span class="p">])</span>
+            <span class="n">timings</span> <span class="o">+=</span> <span class="s1">&#39;&lt;BR&gt;</span><span class="se">\n</span><span class="s1"> Total time: </span><span class="si">%.2f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getTotalTime</span><span class="p">())</span>
+            <span class="n">timings</span> <span class="o">+=</span> <span class="s1">&#39;&lt;BR&gt;</span><span class="se">\n</span><span class="s1"> Started at: &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timers</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">timings</span> <span class="o">+=</span> <span class="s1">&#39;&lt;BR&gt;</span><span class="se">\n</span><span class="s1"> Finished at: &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">timings</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+        <span class="n">marks_report</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mark_to_statement_hash</span><span class="p">:</span>
+            <span class="n">marks_report</span> <span class="o">+=</span> <span class="s1">&#39;&lt;P&gt;Top 20 statement marks:&#39;</span>
+            <span class="n">marks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mark_to_statement_hash</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+            <span class="n">marks</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">marks</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mark_to_statement_hash</span><span class="p">[</span><span class="n">x</span><span class="p">]))</span>
+            <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">mark</span> <span class="ow">in</span> <span class="n">marks</span><span class="p">[:</span><span class="mi">20</span><span class="p">]:</span>
+                <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">marks_report</span> <span class="o">+=</span> <span class="s1">&#39;&lt;BR&gt;&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mark_to_statement_hash</span><span class="p">[</span><span class="n">mark</span><span class="p">]))</span> <span class="o">+</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">mark</span><span class="o">.</span><span class="n">getUnifierTree</span><span class="p">(</span>
+                <span class="p">))</span> <span class="o">+</span> <span class="s2">&quot;&lt;a href=</span><span class="se">\&quot;</span><span class="s2">javascript:unhide(&#39;stmt</span><span class="si">%d</span><span class="s2">&#39;);</span><span class="se">\&quot;</span><span class="s2">&gt;show/hide representatives&lt;/a&gt; &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">counter</span><span class="p">,)</span>
+                <span class="n">marks_report</span> <span class="o">+=</span> <span class="s1">&#39;&lt;div id=&quot;stmt</span><span class="si">%d</span><span class="s1">&quot; class=&quot;hidden&quot;&gt; &lt;BR&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">counter</span><span class="p">,)</span>
+                <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mark_to_statement_hash</span><span class="p">[</span><span class="n">mark</span><span class="p">]:</span>
+                    <span class="n">marks_report</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;&lt;BR&gt;&#39;</span>
+                <span class="n">marks_report</span> <span class="o">+=</span> <span class="s1">&#39;&lt;/div&gt;&#39;</span>
+                <span class="n">marks_report</span> <span class="o">+=</span> <span class="s1">&#39;&lt;/P&gt;&#39;</span>
+
+        <span class="n">warnings</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">arguments</span><span class="o">.</span><span class="n">use_diff</span><span class="p">:</span>
+            <span class="n">warnings</span> <span class="o">+=</span> <span class="s1">&#39;&lt;P&gt;(*) Warning: the highlighting of differences is based on &#39;</span>\
+                        <span class="s1">&#39;diff and doesn</span><span class="se">\&#39;</span><span class="s1">t reflect the tree-based clone detection algorithm.&lt;/P&gt;&#39;</span>
+        <span class="n">save_to</span> <span class="o">=</span> <span class="n">eclipse_start</span> <span class="o">+</span> \
+            <span class="s1">&#39;&lt;b&gt;&lt;a href=&quot;file://</span><span class="si">%s</span><span class="s1">&quot;&gt;Save this report&lt;/a&gt;&lt;/b&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                <span class="n">file_name</span><span class="p">,)</span> <span class="o">+</span> <span class="n">eclipse_end</span>
+        <span class="n">HTML_code</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">&lt;HTML&gt;</span>
+<span class="s2">    &lt;HEAD&gt;</span>
+<span class="s2">        &lt;TITLE&gt; CloneDigger Report &lt;/TITLE&gt;</span>
+<span class="s2">        &lt;script type=&quot;text/javascript&quot;&gt;</span>
+<span class="s2">        function unhide(divID) {</span>
+<span class="s2">            var item = document.getElementById(divID);</span>
+<span class="s2">            if (item) {</span>
+<span class="s2">                item.className=(item.className==&#39;hidden&#39;)?&#39;unhidden&#39;:&#39;hidden&#39;;</span>
+<span class="s2">            }</span>
+<span class="s2">        }</span>
+<span class="s2">&lt;/script&gt;</span>
+
+<span class="s2">&lt;style type=&quot;text/css&quot;&gt;</span>
+<span class="s2">.hidden { display: none; }</span>
+<span class="s2">.unhidden { display: block; }</span>
+<span class="s2">.preformatted {</span>
+<span class="s2">        border: 1px dashed #3c78b5;</span>
+<span class="s2">    font-size: 11px;</span>
+<span class="s2">        font-family: Courier;</span>
+<span class="s2">    margin: 10px;</span>
+<span class="s2">        line-height: 13px;</span>
+<span class="s2">}</span>
+<span class="s2">.preformattedHeader {</span>
+<span class="s2">    background-color: #f0f0f0;</span>
+<span class="s2">        border-bottom: 1px dashed #3c78b5;</span>
+<span class="s2">    padding: 3px;</span>
+<span class="s2">        text-align: center;</span>
+<span class="s2">}</span>
+<span class="s2">.preformattedContent {</span>
+<span class="s2">    background-color: #f0f0f0;</span>
+<span class="s2">    padding: 3px;</span>
+<span class="s2">}</span>
+<span class="s2">&lt;!--</span>
+<span class="s2">&lt;div class=&quot;preformatted&quot;&gt;&lt;div class=&quot;preformattedContent&quot;&gt;</span>
+<span class="s2">&lt;pre&gt;Clone Digger</span>
+<span class="s2">&lt;/pre&gt;</span>
+<span class="s2">&lt;/div&gt;&lt;/div&gt;</span>
+<span class="s2">--&gt;</span>
+
+<span class="s2">&lt;/style&gt;</span>
+
+<span class="s2">    &lt;/HEAD&gt;</span>
+<span class="s2">    &lt;BODY&gt;</span>
+<span class="s2">    </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    &lt;HR&gt;</span>
+<span class="s2">    Clone Digger is aimed to find software clones in Python and Java programs. It is provided under the GPL license and can be downloaded from the site &lt;a href=&quot;http://clonedigger.sourceforge.net&quot;&gt;http://clonedigger.sourceforge.net&lt;/a&gt;</span>
+<span class="s2">    &lt;/BODY&gt;</span>
+<span class="s2">&lt;/HTML&gt;&quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">errors_info</span><span class="p">,</span> <span class="n">save_to</span><span class="p">,</span> <span class="n">descr</span><span class="p">,</span> <span class="n">timings</span><span class="p">,</span> <span class="s1">&#39;&lt;BR&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">clone_descriptions</span><span class="p">),</span> <span class="n">marks_report</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">eclipse_start</span> <span class="o">+</span> <span class="s1">&#39;.*?&#39;</span> <span class="o">+</span> <span class="n">eclipse_end</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">HTML_code</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">arguments</span><span class="o">.</span><span class="n">eclipse_output</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">arguments</span><span class="o">.</span><span class="n">eclipse_output</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">HTML_code</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Clone Digger</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">clonedigger</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, peter_bulychev, jlachowski.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

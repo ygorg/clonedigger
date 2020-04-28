@@ -1,0 +1,629 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>clonedigger.clone_detection_algorithm &#8212; Clone Digger  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for clonedigger.clone_detection_algorithm</h1><div class="highlight"><pre>
+<span></span><span class="c1">#    Copyright 2008 Peter Bulychev</span>
+<span class="c1">#</span>
+<span class="c1">#    This file is part of Clone Digger.</span>
+<span class="c1">#</span>
+<span class="c1">#    Clone Digger is free software: you can redistribute it and/or modify</span>
+<span class="c1">#    it under the terms of the GNU General Public License as published by</span>
+<span class="c1">#    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1">#    (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1">#    Clone Digger is distributed in the hope that it will be useful,</span>
+<span class="c1">#    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1">#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c1">#    GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1">#   You should have received a copy of the GNU General Public License</span>
+<span class="c1">#   along with Clone Digger.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot;clone_detection_algorithm module&quot;&quot;&quot;</span>
+
+<span class="sd">&quot;&quot;&quot;from __future__ import absolute_import</span>
+<span class="sd">from __future__ import unicode_literals</span>
+<span class="sd">from __future__ import print_function</span>
+<span class="sd">from __future__ import division</span>
+<span class="sd">from future import standard_library</span>
+<span class="sd">standard_library.install_aliases()</span>
+<span class="sd">from builtins import str</span>
+<span class="sd">from builtins import range</span>
+<span class="sd">from builtins import *</span>
+<span class="sd">from builtins import object</span>
+<span class="sd">from past.utils import old_div&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">arguments</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">suffix_tree</span>
+<span class="kn">from</span> <span class="nn">.anti_unification</span> <span class="kn">import</span> <span class="n">Cluster</span><span class="p">,</span> <span class="n">Unifier</span>
+<span class="kn">from</span> <span class="nn">.abstract_syntax_tree</span> <span class="kn">import</span> <span class="n">StatementSequence</span><span class="p">,</span> <span class="n">PairSequences</span>
+
+<span class="n">MAX_SEQUENCE_LENGTH</span> <span class="o">=</span> <span class="mi">1000</span>
+
+
+<div class="viewcode-block" id="build_hash_to_statement"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.build_hash_to_statement">[docs]</a><span class="k">def</span> <span class="nf">build_hash_to_statement</span><span class="p">(</span><span class="n">statement_sequences</span><span class="p">,</span> <span class="n">dcup_hash</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute hash for every statement</span>
+
+<span class="sd">    Two statement can have the same hash</span>
+
+<span class="sd">    :param statement_sequences: Statements to compute hash</span>
+<span class="sd">    :type statement_sequences: List[StatementSequence]</span>
+<span class="sd">    :param dcup_hash: Use dcup hash, defaults to True</span>
+<span class="sd">    :type dcup_hash: bool, optional</span>
+<span class="sd">    :returns: A map Hash -&gt; List[Statement]</span>
+<span class="sd">    :rtype: {Dict[int -&gt; List[Statement]]}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">hash_to_statement</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">statement_sequence</span> <span class="ow">in</span> <span class="n">statement_sequences</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">statement_sequence</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dcup_hash</span><span class="p">:</span>
+                <span class="c1"># 3 - CONSTANT HERE!</span>
+                <span class="n">h</span> <span class="o">=</span> <span class="n">statement</span><span class="o">.</span><span class="n">getDCupHash</span><span class="p">(</span><span class="n">arguments</span><span class="o">.</span><span class="n">hashing_depth</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">h</span> <span class="o">=</span> <span class="n">statement</span><span class="o">.</span><span class="n">getFullHash</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">h</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">hash_to_statement</span><span class="p">:</span>
+                <span class="n">hash_to_statement</span><span class="p">[</span><span class="n">h</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">statement</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">hash_to_statement</span><span class="p">[</span><span class="n">h</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">hash_to_statement</span></div>
+
+
+<div class="viewcode-block" id="build_unifiers"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.build_unifiers">[docs]</a><span class="k">def</span> <span class="nf">build_unifiers</span><span class="p">(</span><span class="n">hash_to_statement</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Populate Cluster object with Statement.</span>
+
+<span class="sd">    Greedily add the cheapest statement to Clusters by unifying, thus creating</span>
+<span class="sd">    Unifiers for each cluster. This clusters on hash, but finer.</span>
+
+<span class="sd">    :param hash_to_statement: Statements grouped by hash</span>
+<span class="sd">    :type hash_to_statement: Dict[int, List[AbstractSyntaxTree]]</span>
+<span class="sd">    :returns: A list of unified Cluster</span>
+<span class="sd">    :rtype: {Dict[int, Cluster]}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">processed_statements_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">clusters</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">hash_to_statement</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+        <span class="c1"># For each hash cluster it&#39;s statements</span>
+        <span class="n">local_clusters</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">statements</span> <span class="o">=</span> <span class="n">hash_to_statement</span><span class="p">[</span><span class="n">h</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">statements</span><span class="p">:</span>
+            <span class="n">processed_statements_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">processed_statements_count</span> <span class="o">%</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">,&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">processed_statements_count</span><span class="p">))</span>
+
+            <span class="c1"># Fig 1. in (Bulychev et al., 2008)</span>
+            <span class="c1"># Compute the local cluster that has the lowest cost of adding the</span>
+            <span class="c1">#  statement</span>
+            <span class="n">bestcluster</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">mincost</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">maxsize</span>
+            <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">local_clusters</span><span class="p">:</span>
+                <span class="n">cost</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">getAddCost</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">cost</span> <span class="o">&lt;</span> <span class="n">mincost</span><span class="p">:</span>
+                    <span class="n">mincost</span> <span class="o">=</span> <span class="n">cost</span>
+                    <span class="n">bestcluster</span> <span class="o">=</span> <span class="n">cluster</span>
+            <span class="k">assert</span><span class="p">(</span><span class="n">local_clusters</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span> <span class="n">bestcluster</span><span class="p">)</span>
+
+            <span class="c1"># The minimum cost should not be &lt;0 (how would this be possible ??)</span>
+            <span class="c1"># mincost is (len(cluster) * len(cluster.unifier.subs[0]) + len(cluster.unifier.subs[1]))</span>
+            <span class="k">if</span> <span class="n">mincost</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">pdb</span><span class="o">.</span><span class="n">set_trace</span><span class="p">()</span>
+            <span class="k">assert</span> <span class="n">mincost</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+
+            <span class="c1"># There was no pre-existing local cluster</span>
+            <span class="c1">#  or the cost of adding the statement is too big</span>
+            <span class="c1">#  Creating a new local cluster</span>
+            <span class="k">if</span> <span class="n">bestcluster</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">mincost</span> <span class="o">&gt;</span> <span class="n">arguments</span><span class="o">.</span><span class="n">clustering_threshold</span><span class="p">:</span>
+                <span class="n">newcluster</span> <span class="o">=</span> <span class="n">Cluster</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
+                <span class="n">local_clusters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">newcluster</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">bestcluster</span><span class="o">.</span><span class="n">unify</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
+        <span class="n">ret</span><span class="p">[</span><span class="n">h</span><span class="p">]</span> <span class="o">=</span> <span class="n">local_clusters</span>
+        <span class="n">clusters</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">local_clusters</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret</span></div>
+
+
+<div class="viewcode-block" id="clusterize"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.clusterize">[docs]</a><span class="k">def</span> <span class="nf">clusterize</span><span class="p">(</span><span class="n">hash_to_statement</span><span class="p">,</span> <span class="n">clusters_map</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add statements to Cluster&#39;s unifier</span>
+
+<span class="sd">    Greedily add statements to cluster based on distance to Cluster&#39;s unifier</span>
+
+<span class="sd">    :param hash_to_statement: Statements grouped by hash</span>
+<span class="sd">    :type hash_to_statement: Dict[int, List[Statement]]</span>
+<span class="sd">    :param clusters_map: Clusters grouped by hash</span>
+<span class="sd">    :type clusters_map: Dict[int, List[Cluster]]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Are the same Statements added to the same clusters than in build_unifiers ??</span>
+    <span class="c1"># What does this function do more than just calling setMark on statements</span>
+
+    <span class="n">processed_statements_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1"># clusters_map contain hash values for statements, not unifiers</span>
+    <span class="c1"># therefore it will work correct even if unifiers are smaller than hashing depth value</span>
+    <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">hash_to_statement</span><span class="p">:</span>
+        <span class="c1"># For each hash, get statements and local_clusters</span>
+        <span class="n">clusters</span> <span class="o">=</span> <span class="n">clusters_map</span><span class="p">[</span><span class="n">h</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">hash_to_statement</span><span class="p">[</span><span class="n">h</span><span class="p">]:</span>
+            <span class="n">processed_statements_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">processed_statements_count</span> <span class="o">%</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">,&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">processed_statements_count</span><span class="p">))</span>
+            <span class="n">mincost</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">maxsize</span>
+            <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">clusters</span><span class="p">:</span>
+                <span class="c1"># For each local_cluster add statement if adding it is cheap</span>
+                <span class="c1"># But the statement will always be added to the first local_cluster,</span>
+                <span class="c1">#  and the last will likely be never</span>
+
+                <span class="c1"># TODO: should this be cluster.getAddCost(statement)</span>
+                <span class="n">new_u</span> <span class="o">=</span> <span class="n">Unifier</span><span class="p">(</span><span class="n">cluster</span><span class="o">.</span><span class="n">getUnifierTree</span><span class="p">(),</span> <span class="n">statement</span><span class="p">)</span>
+                <span class="c1"># assert(new_u.getSubstitutions()[0].getSize() == 0)</span>
+                <span class="n">cost</span> <span class="o">=</span> <span class="n">new_u</span><span class="o">.</span><span class="n">getSize</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">cost</span> <span class="o">&lt;</span> <span class="n">mincost</span><span class="p">:</span>
+                    <span class="c1"># statement.setMark can only hold one value</span>
+                    <span class="c1"># The statement can be theoretically added to multiple</span>
+                    <span class="c1">#  clusters (is this the case?)</span>
+                    <span class="c1"># This will result in statement occuring in multiple cluster,</span>
+                    <span class="c1">#  but statement will belong to only one (according to stmt._mark)</span>
+                    <span class="n">mincost</span> <span class="o">=</span> <span class="n">cost</span>
+                    <span class="n">statement</span><span class="o">.</span><span class="n">setMark</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span>
+                    <span class="n">cluster</span><span class="o">.</span><span class="n">addWithoutUnification</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span></div>
+                    <span class="c1"># It this the wanted behaviour ?</span>
+                    <span class="c1"># Why not creating new Cluster objects ? The same statement</span>
+                    <span class="c1">#  can be added once in build_unifiers and once again in here</span>
+
+
+<div class="viewcode-block" id="filterOutLongSequences"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.filterOutLongSequences">[docs]</a><span class="k">def</span> <span class="nf">filterOutLongSequences</span><span class="p">(</span><span class="n">statement_sequences</span><span class="p">,</span> <span class="n">max_length</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">print_warn</span><span class="p">(</span><span class="n">seq</span><span class="p">):</span>
+        <span class="c1"># This function is defined here to clear the body of the function</span>
+        <span class="n">stmt</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;-----------------------------------------&#39;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s1">&#39;Warning: sequences of statements starting at </span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">, consists of </span><span class="si">{}</span><span class="s1"> &#39;</span>
+            <span class="s1">&#39;elements which is too long.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">stmt</span><span class="o">.</span><span class="n">getSourceFile</span><span class="p">()</span><span class="o">.</span><span class="n">getFileName</span><span class="p">(),</span>
+                <span class="nb">min</span><span class="p">(</span><span class="n">stmt</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">()),</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)))</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;It will be ignored. Use --force to override this restriction.&#39;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Please refer to http://clonedigger.sourceforge.net/documentation.html&#39;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;-----------------------------------------&#39;</span><span class="p">)</span>
+
+    <span class="n">sequences</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">sequence</span> <span class="ow">in</span> <span class="n">statement_sequences</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_length</span><span class="p">:</span>
+            <span class="n">print_warn</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="n">sequences</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sequences</span></div>
+
+
+<div class="viewcode-block" id="filterOutLongEquallyLabeledSequences"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.filterOutLongEquallyLabeledSequences">[docs]</a><span class="k">def</span> <span class="nf">filterOutLongEquallyLabeledSequences</span><span class="p">(</span><span class="n">statement_sequences</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">print_warn</span><span class="p">(</span><span class="n">stmt</span><span class="p">):</span>
+        <span class="c1"># This function is defined here to clear the body of the function</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;-----------------------------------------&#39;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s1">&#39;Warning: sequence of statements starting at </span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1"> consists of many &#39;</span>
+            <span class="s1">&#39;similar statements.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">stmt</span><span class="o">.</span><span class="n">getSourceFile</span><span class="p">()</span><span class="o">.</span><span class="n">getFileName</span><span class="p">(),</span>
+                <span class="nb">min</span><span class="p">(</span><span class="n">stmt</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">())))</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;It will be ignored. Use --force to override this restriction.&#39;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Please refer to http://clonedigger.sourceforge.net/documentation.html&#39;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;-----------------------------------------&#39;</span><span class="p">)</span>
+
+    <span class="c1"># TODO - refactor, combine with the previous warning</span>
+    <span class="n">sequences_without_restriction</span> <span class="o">=</span> <span class="n">statement_sequences</span>
+    <span class="n">statement_sequences</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">sequence</span> <span class="ow">in</span> <span class="n">sequences_without_restriction</span><span class="p">:</span>
+        <span class="n">new_sequence</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">sequence</span><span class="o">.</span><span class="n">_sequence</span><span class="p">)</span>
+        <span class="n">current_mark</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">first_statement_index</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sequence</span><span class="p">)):</span>
+            <span class="n">statement</span> <span class="o">=</span> <span class="n">sequence</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">statement</span><span class="o">.</span><span class="n">getMark</span><span class="p">()</span> <span class="o">!=</span> <span class="n">current_mark</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">flag</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="n">flag</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="n">current_mark</span> <span class="o">=</span> <span class="n">statement</span><span class="o">.</span><span class="n">getMark</span><span class="p">()</span>
+                <span class="n">length</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">first_statement_index</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">length</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+                    <span class="n">new_sequence</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">flag</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">first_statement_index</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+                            <span class="n">new_sequence</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="n">print_warn</span><span class="p">(</span><span class="n">sequence</span><span class="p">[</span><span class="n">first_statement_index</span><span class="p">])</span>
+                        <span class="n">flag</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">new_sequence</span> <span class="o">=</span> <span class="n">new_sequence</span> <span class="o">+</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+        <span class="n">cur_sequence</span> <span class="o">=</span> <span class="n">StatementSequence</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">new_sequence</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">statement</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cur_sequence</span><span class="p">:</span>
+                    <span class="n">statement_sequences</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cur_sequence</span><span class="p">)</span>
+                    <span class="n">cur_sequence</span> <span class="o">=</span> <span class="n">StatementSequence</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cur_sequence</span><span class="o">.</span><span class="n">addStatement</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">statement_sequences</span></div>
+
+
+<span class="c1"># TODO: rename to findCandidateClones</span>
+<span class="c1"># TODO: add threshold argument to explicitly say what this function does</span>
+<div class="viewcode-block" id="findHugeSequences"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.findHugeSequences">[docs]</a><span class="k">def</span> <span class="nf">findHugeSequences</span><span class="p">(</span><span class="n">statement_sequences</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return candidate clones which cover at least `arguments.size_threshold` lines</span>
+
+<span class="sd">    Use a suffixTree to find candidate clones.</span>
+
+<span class="sd">    :param statement_sequences: Candidate StatetementSequences</span>
+<span class="sd">    :type statement_sequences: List[PairSequences]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Function[Cluster -&gt; int]</span>
+    <span class="n">f_size</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">getMaxCoveredLines</span><span class="p">()</span>
+    <span class="c1"># Function[List[AbstractSyntaxtree] -&gt; int]</span>
+    <span class="n">f_elem</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">StatementSequence</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">getCoveredLineNumbersCount</span><span class="p">()</span>
+    <span class="c1"># Key to use in SuffixTree, Function[AbstractSyntaxTree -&gt; Cluster]</span>
+    <span class="n">fcode</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">getMark</span><span class="p">()</span>
+
+    <span class="n">suffix_tree_instance</span> <span class="o">=</span> <span class="n">suffix_tree</span><span class="o">.</span><span class="n">SuffixTree</span><span class="p">(</span><span class="n">fcode</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">sequence</span> <span class="ow">in</span> <span class="n">statement_sequences</span><span class="p">:</span>
+        <span class="n">suffix_tree_instance</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span>
+
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">suffix_tree_instance</span><span class="o">.</span><span class="n">getBestMaxSubstrings</span><span class="p">(</span><span class="n">arguments</span><span class="o">.</span><span class="n">size_threshold</span><span class="p">,</span> <span class="n">f_size</span><span class="p">,</span> <span class="n">f_elem</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">PairSequences</span><span class="p">([</span><span class="n">StatementSequence</span><span class="p">(</span><span class="n">s1</span><span class="p">),</span> <span class="n">StatementSequence</span><span class="p">(</span><span class="n">s2</span><span class="p">)])</span> <span class="k">for</span> <span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span> <span class="ow">in</span> <span class="n">tmp</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="all_pairsubsequences_size_n_threshold"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.all_pairsubsequences_size_n_threshold">[docs]</a><span class="k">def</span> <span class="nf">all_pairsubsequences_size_n_threshold</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">pair_sequences</span><span class="p">):</span>
+    <span class="n">lr</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">first</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pair_sequences</span><span class="o">.</span><span class="n">getLength</span><span class="p">()</span> <span class="o">-</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">new_pair_sequences</span> <span class="o">=</span> <span class="n">pair_sequences</span><span class="o">.</span><span class="n">subSequence</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">new_pair_sequences</span><span class="o">.</span><span class="n">getMaxCoveredLineNumbersCount</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">size</span> <span class="o">&gt;=</span> <span class="n">arguments</span><span class="o">.</span><span class="n">size_threshold</span><span class="p">:</span>
+            <span class="n">lr</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">new_pair_sequences</span><span class="p">,</span> <span class="n">first</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">lr</span></div>
+
+
+<div class="viewcode-block" id="refineDuplicates"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.refineDuplicates">[docs]</a><span class="k">def</span> <span class="nf">refineDuplicates</span><span class="p">(</span><span class="n">pairs_sequences</span><span class="p">):</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">flag</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">while</span> <span class="n">pairs_sequences</span><span class="p">:</span>
+        <span class="n">pair_sequences</span> <span class="o">=</span> <span class="n">pairs_sequences</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">pair_sequences</span><span class="o">.</span><span class="n">getLength</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">new_pairs_sequences</span> <span class="o">=</span> <span class="n">all_pairsubsequences_size_n_threshold</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">pair_sequences</span><span class="p">)</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">candidate_sequence</span><span class="p">,</span> <span class="n">first</span><span class="p">)</span> <span class="ow">in</span> <span class="n">new_pairs_sequences</span><span class="p">:</span>
+                <span class="n">distance</span> <span class="o">=</span> <span class="n">candidate_sequence</span><span class="o">.</span><span class="n">calcDistance</span><span class="p">()</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">distance</span> <span class="o">&lt;</span> <span class="n">arguments</span><span class="o">.</span><span class="n">distance_threshold</span><span class="p">):</span>
+                    <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">candidate_sequence</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">first</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">pairs_sequences</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="n">pair_sequences</span><span class="o">.</span><span class="n">subSequence</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">first</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">first</span> <span class="o">+</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="n">pair_sequences</span><span class="o">.</span><span class="n">getLength</span><span class="p">():</span>
+                        <span class="n">pairs_sequences</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pair_sequences</span><span class="o">.</span><span class="n">subSequence</span><span class="p">(</span>
+                            <span class="n">first</span> <span class="o">+</span> <span class="n">n</span><span class="p">,</span> <span class="n">pair_sequences</span><span class="o">.</span><span class="n">getLength</span><span class="p">()</span> <span class="o">-</span> <span class="n">first</span> <span class="o">-</span> <span class="n">n</span><span class="p">))</span>
+                    <span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">flag</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="n">flag</span><span class="p">:</span>
+                <span class="n">flag</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">break</span>
+    <span class="k">return</span> <span class="n">r</span></div>
+
+
+<div class="viewcode-block" id="remove_dominated_clones"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.remove_dominated_clones">[docs]</a><span class="k">def</span> <span class="nf">remove_dominated_clones</span><span class="p">(</span><span class="n">clones</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;[summary]</span>
+
+<span class="sd">    [description]</span>
+
+<span class="sd">    :param clones: [description]</span>
+<span class="sd">    :type clones: List[PairSequence]</span>
+<span class="sd">    :returns: [description]</span>
+<span class="sd">    :rtype: {List[PairSequence]}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ret_clones</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># def f_cmp(a, b):</span>
+    <span class="c1">#     return a.getLevel().__cmp__(b.getLevel())</span>
+    <span class="c1"># clones.sort(f_cmp)</span>
+    <span class="n">statement_to_clone</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">clone</span> <span class="ow">in</span> <span class="n">clones</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">sequence</span> <span class="ow">in</span> <span class="n">clone</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">statement</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">statement_to_clone</span><span class="p">:</span>
+                    <span class="n">statement_to_clone</span><span class="p">[</span><span class="n">statement</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">statement_to_clone</span><span class="p">[</span><span class="n">statement</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">clone</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">clone</span> <span class="ow">in</span> <span class="n">clones</span><span class="p">:</span>
+        <span class="n">ancestors_2</span> <span class="o">=</span> <span class="n">clone</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getAncestors</span><span class="p">()</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">for</span> <span class="n">s1</span> <span class="ow">in</span> <span class="n">clone</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getAncestors</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">s1</span> <span class="ow">in</span> <span class="n">statement_to_clone</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">clone2</span> <span class="ow">in</span> <span class="n">statement_to_clone</span><span class="p">[</span><span class="n">s1</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="n">s1</span> <span class="ow">in</span> <span class="n">clone2</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                        <span class="n">seq</span> <span class="o">=</span> <span class="n">clone2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">assert</span><span class="p">(</span><span class="n">s1</span> <span class="ow">in</span> <span class="n">clone2</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="n">seq</span> <span class="o">=</span> <span class="n">clone2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">s2</span> <span class="ow">in</span> <span class="n">seq</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">s2</span> <span class="ow">in</span> <span class="n">ancestors_2</span><span class="p">:</span>
+                            <span class="n">flag</span> <span class="o">=</span> <span class="kc">False</span>
+                            <span class="k">break</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">flag</span><span class="p">:</span>
+                        <span class="k">break</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">flag</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="n">flag</span><span class="p">:</span>
+            <span class="n">ret_clones</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">clone</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret_clones</span></div>
+
+
+<div class="viewcode-block" id="print_statistics"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.print_statistics">[docs]</a><span class="k">def</span> <span class="nf">print_statistics</span><span class="p">(</span><span class="n">sequences_lengths</span><span class="p">,</span> <span class="n">statement_count</span><span class="p">):</span>
+    <span class="n">n_sequences</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sequences_lengths</span><span class="p">)</span>
+    <span class="n">avg_seq_length</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">sequences_lengths</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_sequences</span>
+    <span class="n">max_seq_length</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">sequences_lengths</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> sequences&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_sequences</span><span class="p">))</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;average sequence length: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">avg_seq_length</span><span class="p">))</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;maximum sequence length: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_seq_length</span><span class="p">))</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;number of statements: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">statement_count</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="findDuplicateCode"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.clone_detection_algorithm.findDuplicateCode">[docs]</a><span class="k">def</span> <span class="nf">findDuplicateCode</span><span class="p">(</span><span class="n">source_files</span><span class="p">,</span> <span class="n">report</span><span class="p">):</span>
+    <span class="n">statement_sequences</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">statement_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">sequences_lengths</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Retrieve statements from every files</span>
+    <span class="k">for</span> <span class="n">source_file</span> <span class="ow">in</span> <span class="n">source_files</span><span class="p">:</span>
+        <span class="n">sequences</span> <span class="o">=</span> <span class="n">source_file</span><span class="o">.</span><span class="n">getTree</span><span class="p">()</span><span class="o">.</span><span class="n">getAllStatementSequences</span><span class="p">()</span>
+        <span class="n">statement_sequences</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">sequences</span><span class="p">)</span>
+        <span class="n">sequences_lengths</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sequences</span><span class="p">])</span>
+        <span class="c1"># TODO: Compute afterwards, it is [[len(s) for s in stmt] for stmt in seqs]</span>
+        <span class="n">statement_count</span> <span class="o">+=</span> <span class="nb">sum</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sequences</span><span class="p">])</span>
+        <span class="c1"># TODO: Compute afterwards, it is sum(flatten(sequence_lengths))</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">sequences_lengths</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Input is empty or the size of the input is below the size threshold&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="n">print_statistics</span><span class="p">(</span><span class="n">sequences_lengths</span><span class="p">,</span> <span class="n">statement_count</span><span class="p">)</span>
+
+    <span class="c1">##</span>
+    <span class="c1"># Prepare statements</span>
+    <span class="c1">#  Compute hash value for every statement</span>
+    <span class="c1">##</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">arguments</span><span class="o">.</span><span class="n">force</span><span class="p">:</span>
+        <span class="n">statement_sequences</span> <span class="o">=</span> <span class="n">filterOutLongSequences</span><span class="p">(</span>
+            <span class="n">statement_sequences</span><span class="p">,</span> <span class="n">MAX_SEQUENCE_LENGTH</span><span class="p">)</span>
+
+    <span class="c1"># TODO: In order to call `storeSize` and compute hash, the trees must be</span>
+    <span class="c1">#  completed. Could this be done earlier ? (Right after parsing files)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Calculating size for each statement...&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">sequence</span> <span class="ow">in</span> <span class="n">statement_sequences</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">:</span>
+            <span class="n">statement</span><span class="o">.</span><span class="n">storeSize</span><span class="p">()</span>
+
+    <span class="c1"># First step of clustering:</span>
+    <span class="c1">#  Use hash to cluster Statements</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Building statement hash...&#39;</span><span class="p">)</span>
+    <span class="n">report</span><span class="o">.</span><span class="n">startTimer</span><span class="p">(</span><span class="s1">&#39;Building statement hash&#39;</span><span class="p">)</span>
+    <span class="n">hash_to_statement</span> <span class="o">=</span> <span class="n">build_hash_to_statement</span><span class="p">(</span>
+        <span class="n">statement_sequences</span><span class="p">,</span>
+        <span class="n">dcup_hash</span><span class="o">=</span><span class="n">arguments</span><span class="o">.</span><span class="n">clusterize_using_hash</span><span class="p">)</span>
+    <span class="n">report</span><span class="o">.</span><span class="n">stopTimer</span><span class="p">()</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Number of different hash values: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hash_to_statement</span><span class="p">)))</span>
+
+    <span class="c1">##</span>
+    <span class="c1"># Group statements in clusters of similar statements</span>
+    <span class="c1">#  Based on hash, group statements (by setting the `.mark` attribute)</span>
+    <span class="c1">##</span>
+
+    <span class="c1"># Second step of clustering:</span>
+    <span class="c1">#  Find patterns which are recurring sequences of Clusters</span>
+
+    <span class="k">if</span> <span class="n">arguments</span><span class="o">.</span><span class="n">clusterize_using_dcup</span> <span class="ow">or</span> <span class="n">arguments</span><span class="o">.</span><span class="n">clusterize_using_hash</span><span class="p">:</span>
+        <span class="c1"># As statements can have the same hash, use the hash to make clusters</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Marking each statement with its hash value&#39;</span><span class="p">)</span>
+        <span class="c1"># mark_using_hash</span>
+        <span class="c1"># For each hash make a Cluster</span>
+        <span class="c1"># Populate Cluster objects and setMark</span>
+        <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">hash_to_statement</span><span class="p">:</span>
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">Cluster</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">hash_to_statement</span><span class="p">[</span><span class="n">h</span><span class="p">]:</span>
+                <span class="n">cluster</span><span class="o">.</span><span class="n">addWithoutUnification</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
+                <span class="n">statement</span><span class="o">.</span><span class="n">setMark</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Building patterns...&#39;</span><span class="p">)</span>
+        <span class="n">report</span><span class="o">.</span><span class="n">startTimer</span><span class="p">(</span><span class="s1">&#39;Building patterns&#39;</span><span class="p">)</span>
+        <span class="n">clusters_map</span> <span class="o">=</span> <span class="n">build_unifiers</span><span class="p">(</span><span class="n">hash_to_statement</span><span class="p">)</span>
+        <span class="c1"># Populate Cluster objects</span>
+        <span class="n">report</span><span class="o">.</span><span class="n">stopTimer</span><span class="p">()</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> patterns were discovered&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">Cluster</span><span class="o">.</span><span class="n">count</span><span class="p">))</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Choosing pattern for each statement...&#39;</span><span class="p">)</span>
+        <span class="n">report</span><span class="o">.</span><span class="n">startTimer</span><span class="p">(</span><span class="s1">&#39;Marking similar statements&#39;</span><span class="p">)</span>
+        <span class="n">clusterize</span><span class="p">(</span><span class="n">hash_to_statement</span><span class="p">,</span> <span class="n">clusters_map</span><span class="p">)</span>
+        <span class="n">report</span><span class="o">.</span><span class="n">stopTimer</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">arguments</span><span class="o">.</span><span class="n">report_unifiers</span><span class="p">:</span>
+        <span class="c1"># TODO: Why do we need to do this, when the Cluster object exist?</span>
+        <span class="c1">#  Is there no dict holding Statement -&gt; Cluster ?</span>
+        <span class="c1"># We have hash_to_statement : Dict[int -&gt; List[Statement]]</span>
+
+        <span class="c1"># Compute a Dict[Cluster -&gt; List[Statement]]</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Building reverse hash for reporting...&#39;</span><span class="p">)</span>
+        <span class="n">reverse_hash</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">sequence</span> <span class="ow">in</span> <span class="n">statement_sequences</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">:</span>
+                <span class="n">mark</span> <span class="o">=</span> <span class="n">statement</span><span class="o">.</span><span class="n">getMark</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">mark</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">reverse_hash</span><span class="p">:</span>
+                    <span class="n">reverse_hash</span><span class="p">[</span><span class="n">mark</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">reverse_hash</span><span class="p">[</span><span class="n">mark</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
+        <span class="n">report</span><span class="o">.</span><span class="n">setMarkToStatementHash</span><span class="p">(</span><span class="n">reverse_hash</span><span class="p">)</span>
+
+    <span class="c1">##</span>
+    <span class="c1"># Gathering clone candidates</span>
+    <span class="c1">##</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Finding similar sequences of statements...&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">arguments</span><span class="o">.</span><span class="n">force</span><span class="p">:</span>
+        <span class="n">statement_sequences</span> <span class="o">=</span> <span class="n">filterOutLongEquallyLabeledSequences</span><span class="p">(</span>
+            <span class="n">statement_sequences</span><span class="p">)</span>
+
+    <span class="n">report</span><span class="o">.</span><span class="n">startTimer</span><span class="p">(</span><span class="s1">&#39;Finding similar sequences of statements&#39;</span><span class="p">)</span>
+    <span class="c1"># Get clone candidates</span>
+    <span class="n">duplicate_candidates</span> <span class="o">=</span> <span class="n">findHugeSequences</span><span class="p">(</span><span class="n">statement_sequences</span><span class="p">)</span>
+    <span class="n">report</span><span class="o">.</span><span class="n">stopTimer</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> sequences were found&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">duplicate_candidates</span><span class="p">)))</span>
+
+    <span class="c1">##</span>
+    <span class="c1"># Filtering clone candidates</span>
+    <span class="c1">##</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Refining candidates...&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">arguments</span><span class="o">.</span><span class="n">distance_threshold</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">report</span><span class="o">.</span><span class="n">startTimer</span><span class="p">(</span><span class="s1">&#39;Refining candidates&#39;</span><span class="p">)</span>
+        <span class="n">clones</span> <span class="o">=</span> <span class="n">refineDuplicates</span><span class="p">(</span><span class="n">duplicate_candidates</span><span class="p">)</span>
+        <span class="n">report</span><span class="o">.</span><span class="n">stopTimer</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">clones</span> <span class="o">=</span> <span class="n">duplicate_candidates</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> clones were found&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">clones</span><span class="p">)))</span>
+
+    <span class="k">if</span> <span class="n">arguments</span><span class="o">.</span><span class="n">distance_threshold</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Removing dominated clones...&#39;</span><span class="p">)</span>
+        <span class="n">old_clone_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">clones</span><span class="p">)</span>
+        <span class="n">clones</span> <span class="o">=</span> <span class="n">remove_dominated_clones</span><span class="p">(</span><span class="n">clones</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> clones were removed&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">clones</span><span class="p">)</span> <span class="o">-</span> <span class="n">old_clone_count</span><span class="p">))</span>
+
+    <span class="c1">##</span>
+    <span class="c1"># Filling report</span>
+    <span class="c1">##</span>
+
+    <span class="c1"># Count covered lines by all clones</span>
+    <span class="c1"># todo: in a sequence do all trees and subtrees belong to the same _source_file ?</span>
+    <span class="c1">#    if no then the StatementSequence.source_file is </span>
+    <span class="c1"># get covered source lines for all detected clones (set of all)</span>
+    <span class="n">covered_source_lines</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">clone</span> <span class="ow">in</span> <span class="n">clones</span><span class="p">:</span>
+        <span class="c1"># clone is a pair sequence thus it has 2 elements</span>
+        <span class="k">for</span> <span class="n">sequence</span> <span class="ow">in</span> <span class="n">clone</span><span class="p">:</span>
+            <span class="n">covered_source_lines</span> <span class="o">|=</span> <span class="n">sequence</span><span class="o">.</span><span class="n">getLineNumberHashables</span><span class="p">()</span>
+
+    <span class="c1"># get source lines for all files/sequences (set of all)</span>
+    <span class="n">source_lines</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">sequence</span> <span class="ow">in</span> <span class="n">statement_sequences</span><span class="p">:</span>
+        <span class="n">source_lines</span> <span class="o">|=</span> <span class="n">sequence</span><span class="o">.</span><span class="n">getLineNumberHashables</span><span class="p">()</span>
+
+    <span class="n">report</span><span class="o">.</span><span class="n">all_source_lines_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">source_lines</span><span class="p">)</span>
+    <span class="n">report</span><span class="o">.</span><span class="n">covered_source_lines_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">covered_source_lines</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">clones</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Clone Digger</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">clonedigger</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, peter_bulychev, jlachowski.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

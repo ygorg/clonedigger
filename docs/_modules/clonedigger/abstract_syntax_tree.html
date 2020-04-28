@@ -1,0 +1,724 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>clonedigger.abstract_syntax_tree &#8212; Clone Digger  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for clonedigger.abstract_syntax_tree</h1><div class="highlight"><pre>
+<span></span><span class="c1">#    Copyright 2008 Peter Bulychev</span>
+<span class="c1">#</span>
+<span class="c1">#    This file is part of Clone Digger.</span>
+<span class="c1">#</span>
+<span class="c1">#    Clone Digger is free software: you can redistribute it and/or modify</span>
+<span class="c1">#    it under the terms of the GNU General Public License as published by</span>
+<span class="c1">#    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1">#    (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1">#    Clone Digger is distributed in the hope that it will be useful,</span>
+<span class="c1">#    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1">#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c1">#    GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1">#   You should have received a copy of the GNU General Public License</span>
+<span class="c1">#   along with Clone Digger.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot;abstract_syntax_tree module</span>
+
+<span class="sd">.. todo:: What do free_variable_cost represent ?</span>
+<span class="sd">.. todo:: Move free_variable_cost to FreeVariable.free_variable_cost</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">&quot;&quot;&quot;from __future__ import absolute_import</span>
+<span class="sd">from __future__ import unicode_literals</span>
+<span class="sd">from __future__ import print_function</span>
+<span class="sd">from __future__ import division</span>
+<span class="sd">from future import standard_library</span>
+<span class="sd">standard_library.install_aliases()</span>
+<span class="sd">from builtins import str</span>
+<span class="sd">from builtins import range</span>
+<span class="sd">from builtins import *</span>
+<span class="sd">from builtins import object</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">arguments</span>
+
+<span class="n">free_variable_cost</span> <span class="o">=</span> <span class="mf">0.5</span>
+
+
+<div class="viewcode-block" id="filter_func"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.filter_func">[docs]</a><span class="k">def</span> <span class="nf">filter_func</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Remove trailing whitespace if begins with non space characters</span>
+
+<span class="sd">    .. todo:: Equivalent of re.sub(r&#39;[^\s]+)\s*&#39;, r&#39;\1&#39;, s) ?</span>
+
+<span class="sd">    :param s: String to be filtered</span>
+<span class="sd">    :type s: str</span>
+<span class="sd">    :returns: Trimmed string</span>
+<span class="sd">    :rtype: {str}</span>
+
+<span class="sd">    &gt;&gt;&gt; filter_func(&#39;def function(): \\n&#39;)</span>
+<span class="sd">    &#39;def function():&#39;</span>
+<span class="sd">    &gt;&gt;&gt; filter_func(&#39;\\n \\n&#39;)</span>
+<span class="sd">    &#39;\\n \\n&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># Find first character from end that is not a space</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">isspace</span><span class="p">():</span>
+            <span class="k">break</span>
+    <span class="c1"># If found trim</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">s</span><span class="p">[:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">s</span></div>
+
+
+<div class="viewcode-block" id="SourceFile"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.SourceFile">[docs]</a><span class="k">class</span> <span class="nc">SourceFile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract class that create AST from a code file.</span>
+
+<span class="sd">    Read a code file, parse it and create a corresponding AST.</span>
+
+<span class="sd">    :param _source_lines: Original lines of the source file.</span>
+<span class="sd">    :type _source_lines: List[str]</span>
+<span class="sd">    :param _file_name: Name of the source file.</span>
+<span class="sd">    :type _file_name: str</span>
+<span class="sd">    :param _tree: AST representing the source file.</span>
+<span class="sd">    :type _tree: AbstractSyntaxTree</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">size_threshold</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1">#: Minimum number of covered lines of a clone.</span>
+    <span class="n">distance_threshold</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1">#: Maximum edit distance of a clone.</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_source_lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">filter_func</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">f</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_name</span> <span class="o">=</span> <span class="n">file_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tree</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="SourceFile.getSourceLine"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.SourceFile.getSourceLine">[docs]</a>    <span class="k">def</span> <span class="nf">getSourceLine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return n-th line of the file</span>
+
+<span class="sd">        :param n: Line number</span>
+<span class="sd">        :type n: int</span>
+<span class="sd">        :returns: n-th line of self._file_name</span>
+<span class="sd">        :rtype: {str}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># if n &gt;= len(self._source_lines):</span>
+        <span class="c1">#     return &#39;&#39;</span>
+        <span class="c1"># TODO</span>
+        <span class="c1"># error here</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_lines</span><span class="p">[</span><span class="n">n</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="SourceFile._setTree"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.SourceFile._setTree">[docs]</a>    <span class="k">def</span> <span class="nf">_setTree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tree</span> <span class="o">=</span> <span class="n">tree</span></div>
+
+<div class="viewcode-block" id="SourceFile.getTree"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.SourceFile.getTree">[docs]</a>    <span class="k">def</span> <span class="nf">getTree</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tree</span></div>
+
+<div class="viewcode-block" id="SourceFile.getFileName"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.SourceFile.getFileName">[docs]</a>    <span class="k">def</span> <span class="nf">getFileName</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_name</span></div></div>
+
+
+<div class="viewcode-block" id="AbstractSyntaxTree"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree">[docs]</a><span class="k">class</span> <span class="nc">AbstractSyntaxTree</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Tree structure representing code.</span>
+
+<span class="sd">    From (Bulychev et al., 2008): II. A.</span>
+<span class="sd">    Strictly speaking, the abstract syntax trees we use are not always trees, since</span>
+<span class="sd">    leaves containing the same variable references may be merged, [...].</span>
+
+<span class="sd">    A statement (stmt) is a node in the tree that contains an particular tree of code.</span>
+<span class="sd">    It is defined by the Language, see `simple statements &lt;https://docs.python.org/2/reference/simple_stmts.html&gt;`_</span>
+<span class="sd">    and `compound statements &lt;https://docs.python.org/2/reference/compound_stmts.html&gt;`_.</span>
+<span class="sd">    A (really) non exhaustive example (made by printing a tree):</span>
+
+<span class="sd">    - a class is a statement</span>
+<span class="sd">    - an assignement using only builtin operation is a statement</span>
+<span class="sd">    - __init__ function is a statement</span>
+<span class="sd">    - global is a statement</span>
+
+<span class="sd">    But:</span>
+
+<span class="sd">    - a += is not a statement</span>
+<span class="sd">    - return is not</span>
+<span class="sd">    - calling a function is not</span>
+<span class="sd">    - print is not</span>
+<span class="sd">    - defining a function is not</span>
+
+<span class="sd">    .. todo:: Why is += not a stmt, as it is a simple stmt according to the reference.</span>
+<span class="sd">        Same for function definition.</span>
+<span class="sd">    .. todo:: self._line_numbers is only used to initialize _covered_line_numbers</span>
+<span class="sd">        in self.propagateCoveredLineNumbers. Remove the attribute and initialize</span>
+<span class="sd">        _covered_line_numbers ?</span>
+<span class="sd">    .. todo: self.getLineNumbers is never used anywhere</span>
+
+<span class="sd">    :param _name: Name of the node</span>
+<span class="sd">    :type _name: str</span>
+<span class="sd">    :param _source_file: SourceFile containing this tree</span>
+<span class="sd">    :type _source_file: SourceFile</span>
+<span class="sd">    :param _line_numbers: Index of lines covered by the tree.</span>
+<span class="sd">    :type _line_numbers: List[int]</span>
+<span class="sd">    :param _covered_line_numbers: Line covered by the tree and subtrees</span>
+<span class="sd">    :type _covered_line_numbers: List[int]</span>
+<span class="sd">    :param _is_statement: This tree is a statement</span>
+<span class="sd">    :type _is_statement: bool</span>
+
+<span class="sd">    :param _hash: Hash of the tree</span>
+<span class="sd">    :type _hash: int</span>
+<span class="sd">    :param _mark: Used for clustering</span>
+<span class="sd">    :type _mark: Cluster</span>
+
+<span class="sd">    :param _parent: Parent node</span>
+<span class="sd">    :type _parent: AbstractSyntaxTree</span>
+<span class="sd">    :param _childs: List of child nodes</span>
+<span class="sd">    :type _childs: List[AbstractSyntaxTree]</span>
+<span class="sd">    :param _height: Depth of the tree</span>
+<span class="sd">    :type _height: int</span>
+<span class="sd">    :param _size: Number of node + free variable costs</span>
+<span class="sd">    :type _size: float</span>
+<span class="sd">    :param _none_count: Number of None node in subtrees</span>
+<span class="sd">    :type _none_count: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">line_numbers</span><span class="o">=</span><span class="p">[],</span> <span class="n">source_file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span> <span class="o">=</span> <span class="n">source_file</span>
+        <span class="c1"># TODO: Arg is used in ExpatHandler.start_element, PythonCompilerSourceFile.rec_build_tree</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_line_numbers</span> <span class="o">=</span> <span class="n">line_numbers</span>
+        <span class="c1"># TODO: Arg is used in ExpatHandler.start_element, PythonCompilerSourceFile.rec_build_tree</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_covered_line_numbers</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_statement</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hash</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mark</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_childs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_height</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_none_count</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># Members operations</span>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getSourceFile"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getSourceFile">[docs]</a>    <span class="k">def</span> <span class="nf">getSourceFile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getMark"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getMark">[docs]</a>    <span class="k">def</span> <span class="nf">getMark</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mark</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.setMark"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.setMark">[docs]</a>    <span class="k">def</span> <span class="nf">setMark</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mark</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mark</span> <span class="o">=</span> <span class="n">mark</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.isStatement"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.isStatement">[docs]</a>    <span class="k">def</span> <span class="nf">isStatement</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_statement</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.markAsStatement"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.markAsStatement">[docs]</a>    <span class="k">def</span> <span class="nf">markAsStatement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_statement</span> <span class="o">=</span> <span class="n">val</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getName"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getName">[docs]</a>    <span class="k">def</span> <span class="nf">getName</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.setName"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.setName">[docs]</a>    <span class="k">def</span> <span class="nf">setName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">name</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getLineNumbers"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getLineNumbers">[docs]</a>    <span class="k">def</span> <span class="nf">getLineNumbers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO: Unused</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_line_numbers</span></div>
+
+    <span class="c1"># Tree operations</span>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getParent"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getParent">[docs]</a>    <span class="k">def</span> <span class="nf">getParent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.setParent"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.setParent">[docs]</a>    <span class="k">def</span> <span class="nf">setParent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span> <span class="o">=</span> <span class="n">parent</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getChilds"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getChilds">[docs]</a>    <span class="k">def</span> <span class="nf">getChilds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_childs</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getChildCount"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getChildCount">[docs]</a>    <span class="k">def</span> <span class="nf">getChildCount</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_childs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.addChild"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.addChild">[docs]</a>    <span class="k">def</span> <span class="nf">addChild</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">child</span><span class="p">,</span> <span class="n">save_parent</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a child and set its parent to self if save_parent</span>
+
+<span class="sd">        :param child: Child to add</span>
+<span class="sd">        :type child: AbstractSyntaxTree</span>
+<span class="sd">        :param save_parent: Set child&#39;s parent to self, defaults to False</span>
+<span class="sd">        :type save_parent: bool, optional</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">save_parent</span><span class="p">:</span>
+            <span class="n">child</span><span class="o">.</span><span class="n">setParent</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_childs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getCoveredLineNumbers"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getCoveredLineNumbers">[docs]</a>    <span class="k">def</span> <span class="nf">getCoveredLineNumbers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_covered_line_numbers</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.propagateCoveredLineNumbers"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.propagateCoveredLineNumbers">[docs]</a>    <span class="k">def</span> <span class="nf">propagateCoveredLineNumbers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute self._covered_line_numbers for self and childrens</span>
+
+<span class="sd">        :returns: A set of line numbers</span>
+<span class="sd">        :rtype: {Set[int]}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_covered_line_numbers</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_line_numbers</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getChilds</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_covered_line_numbers</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="n">child</span><span class="o">.</span><span class="n">propagateCoveredLineNumbers</span><span class="p">())</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_covered_line_numbers</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getHeight"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getHeight">[docs]</a>    <span class="k">def</span> <span class="nf">getHeight</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return height for this tree</span>
+
+<span class="sd">        The height is the maximum depth of the tree</span>
+
+<span class="sd">        :returns: Height of tree</span>
+<span class="sd">        :rtype: {int}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_height</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.propagateHeight"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.propagateHeight">[docs]</a>    <span class="k">def</span> <span class="nf">propagateHeight</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute height for this tree</span>
+
+<span class="sd">        The height is the maximum depth of the tree</span>
+
+<span class="sd">        :returns: Height of self</span>
+<span class="sd">        :rtype: {int}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">getChildCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_height</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_height</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">propagateHeight</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getChilds</span><span class="p">())</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_height</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getAncestors"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getAncestors">[docs]</a>    <span class="k">def</span> <span class="nf">getAncestors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return ancestors which are statements.</span>
+
+<span class="sd">        Used only in StatementSequence.getAncestors.</span>
+
+<span class="sd">        :returns: Ancestors that are statements</span>
+<span class="sd">        :rtype: {List[AbstractSyntaxTree]}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getParent</span><span class="p">()</span>
+        <span class="k">while</span> <span class="n">t</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">isStatement</span><span class="p">():</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">getParent</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getSourceLines"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getSourceLines">[docs]</a>    <span class="k">def</span> <span class="nf">getSourceLines</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return source lines covered by the tree</span>
+
+<span class="sd">        :returns: A list of lines</span>
+<span class="sd">        :rtype: {List[str]}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">source_line_numbers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">()</span>
+        <span class="n">source_line_numbers_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="nb">range</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">source_line_numbers</span><span class="p">),</span>
+                  <span class="nb">max</span><span class="p">(</span><span class="n">source_line_numbers</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">getLine</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">getSourceFile</span><span class="p">()</span><span class="o">.</span><span class="n">getSourceLine</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">getLine</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">source_line_numbers_list</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getAllStatementSequences"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getAllStatementSequences">[docs]</a>    <span class="k">def</span> <span class="nf">getAllStatementSequences</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return sequences of statement that cover at least *arguments.size_threshold* lines.</span>
+
+<span class="sd">        Recursively search for statements, a new sequence is created when the lines</span>
+<span class="sd">        covered by the sequence exceeds arguments.size_threshold.</span>
+
+<span class="sd">        .. todo:: Are the sequence in a specific order and what do they represent ?</span>
+<span class="sd">        .. todo:: Is it possible that a subtree `s` of `t` and `t` are in the same sequence ?</span>
+
+<span class="sd">        :returns: todo:</span>
+<span class="sd">        :rtype: {List[StatementSequence]}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="n">StatementSequence</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getChilds</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">isStatement</span><span class="p">():</span>
+                <span class="n">current</span><span class="o">.</span><span class="n">addStatement</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="ow">not</span> <span class="n">current</span><span class="o">.</span><span class="n">isEmpty</span><span class="p">())</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">current</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">())</span> <span class="o">&gt;=</span> <span class="n">arguments</span><span class="o">.</span><span class="n">size_threshold</span><span class="p">:</span>
+                <span class="c1"># The current StatementSequence is full, make a new one</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+                <span class="n">current</span> <span class="o">=</span> <span class="n">StatementSequence</span><span class="p">()</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">getAllStatementSequences</span><span class="p">())</span>
+        <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">current</span><span class="o">.</span><span class="n">isEmpty</span><span class="p">())</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">current</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">())</span> <span class="o">&gt;=</span> <span class="n">arguments</span><span class="o">.</span><span class="n">size_threshold</span><span class="p">:</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getSize"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getSize">[docs]</a>    <span class="k">def</span> <span class="nf">getSize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ignore_none</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return number of nodes and free variables cost</span>
+
+<span class="sd">        :param ignore_none: Do not account for None nodes, defaults to True</span>
+<span class="sd">        :type ignore_none: bool, optional</span>
+<span class="sd">        :returns: size of tree</span>
+<span class="sd">        :rtype: {float}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span>
+        <span class="k">if</span> <span class="n">ignore_none</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_none_count</span>
+        <span class="k">return</span> <span class="n">ret</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.storeSize"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.storeSize">[docs]</a>    <span class="k">def</span> <span class="nf">storeSize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the number of nodes and free variables cost recursively</span>
+
+<span class="sd">        The number of nodes and `free_variable_cost`, also compute the number</span>
+<span class="sd">        of None node</span>
+
+<span class="sd">        :returns: Size of tree</span>
+<span class="sd">        :rtype: {float}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">observed</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_none_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">def</span> <span class="nf">rec_calc_size</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">observed</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">r</span>
+
+            <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">getChildCount</span><span class="p">():</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">t</span><span class="o">.</span><span class="n">getChilds</span><span class="p">():</span>
+                    <span class="n">r</span> <span class="o">+=</span> <span class="n">rec_calc_size</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">observed</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_none_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;FreeVariable&#39;</span><span class="p">:</span>
+                    <span class="n">r</span> <span class="o">+=</span> <span class="n">free_variable_cost</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">r</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="n">r</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_size</span> <span class="o">=</span> <span class="n">rec_calc_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getTokenCount"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getTokenCount">[docs]</a>    <span class="k">def</span> <span class="nf">getTokenCount</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Count certain tokens in tree</span>
+
+<span class="sd">        Tokens are listed below</span>
+
+<span class="sd">        :returns: Number of tokens</span>
+<span class="sd">        :rtype: {int}</span>
+
+<span class="sd">        .. todo:: What is this ? `t.getName()[0] != &quot;&#39;&quot; and t.getName() != &#39;Pass&#39;`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">valid_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Add&#39;</span><span class="p">,</span> <span class="s1">&#39;Assign&#39;</span><span class="p">,</span> <span class="s1">&#39;Sub&#39;</span><span class="p">,</span> <span class="s1">&#39;Div&#39;</span><span class="p">,</span> <span class="s1">&#39;Mul&#39;</span><span class="p">,</span> <span class="s1">&#39;Mod&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;Function&#39;</span><span class="p">,</span> <span class="s1">&#39;If&#39;</span><span class="p">,</span> <span class="s1">&#39;Class&#39;</span><span class="p">,</span> <span class="s1">&#39;Raise&#39;</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">rec_calc_size</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">getChildCount</span><span class="p">():</span>
+                <span class="n">r</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="ow">in</span> <span class="n">valid_tokens</span><span class="p">:</span>
+                    <span class="n">r</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">t</span><span class="o">.</span><span class="n">getChilds</span><span class="p">():</span>
+                    <span class="n">r</span> <span class="o">+=</span> <span class="n">rec_calc_size</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># self is leaf</span>
+                <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">getName</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&#39;&quot;</span> <span class="ow">and</span> <span class="n">t</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;Pass&#39;</span><span class="p">:</span>
+                    <span class="c1"># TODO: What is this ?</span>
+                    <span class="k">return</span> <span class="mi">0</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="n">r</span>
+        <span class="k">return</span> <span class="n">rec_calc_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+    <span class="c1"># Compute hashes</span>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getDCupHash"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getDCupHash">[docs]</a>    <span class="k">def</span> <span class="nf">getDCupHash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute a hash using child nodes</span>
+
+<span class="sd">        The hash is computed by summing per node hashes. A node hash is made of</span>
+<span class="sd">        the depth of the node, the name and the number of child.</span>
+
+<span class="sd">        :param level: maximum depth to compute hash</span>
+<span class="sd">        :type level: int</span>
+<span class="sd">        :returns: a tree hash</span>
+<span class="sd">        :rtype: {int}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># in case of names and constants</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_childs</span><span class="p">):</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="p">(</span><span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_childs</span><span class="p">)</span>
+        <span class="c1"># if level == -1, it will not stop until it reaches the leaves</span>
+        <span class="k">if</span> <span class="n">level</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_childs</span><span class="p">)):</span>
+                <span class="n">child</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_childs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">ret</span> <span class="o">+=</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">child</span><span class="o">.</span><span class="n">getDCupHash</span><span class="p">(</span><span class="n">level</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AbstractSyntaxTree.getFullHash"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getFullHash">[docs]</a>    <span class="k">def</span> <span class="nf">getFullHash</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute a hash for the whole tree</span>
+
+<span class="sd">        :returns: a tree hash</span>
+<span class="sd">        :rtype: {int}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDCupHash</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO check correctness</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hash</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hash</span> <span class="o">=</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getDCupHash</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getName</span><span class="p">()))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hash</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39; ( </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1"> ) &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span>
+            <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">getChilds</span><span class="p">())))</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree2</span><span class="p">):</span>
+        <span class="n">tree1</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">if</span> <span class="n">tree2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">tree1</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="o">!=</span> <span class="n">tree2</span><span class="o">.</span><span class="n">getName</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">tree1</span><span class="o">.</span><span class="n">getChildCount</span><span class="p">()</span> <span class="o">!=</span> <span class="n">tree2</span><span class="o">.</span><span class="n">getChildCount</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">tree1</span><span class="o">.</span><span class="n">getChildCount</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">tree1</span><span class="o">.</span><span class="n">getChilds</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">tree2</span><span class="o">.</span><span class="n">getChilds</span><span class="p">()[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="StatementSequence"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence">[docs]</a><span class="k">class</span> <span class="nc">StatementSequence</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Holds a sequence of statements (AST)</span>
+
+<span class="sd">    Used in suffix_tree.SuffixTree to find patterns in code.</span>
+
+<span class="sd">    :param _sequence: A sequence of Statement.</span>
+<span class="sd">    :type _sequence: List[AbstractSyntaxTree]</span>
+<span class="sd">    :param _source_file: Source file Statements are from.</span>
+<span class="sd">    :type _source_file: SourceFile</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequence</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sequence</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">addStatement</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+<div class="viewcode-block" id="StatementSequence.isEmpty"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.isEmpty">[docs]</a>    <span class="k">def</span> <span class="nf">isEmpty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sequence</span> <span class="o">==</span> <span class="p">[]</span></div>
+
+<div class="viewcode-block" id="StatementSequence.getSourceFile"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.getSourceFile">[docs]</a>    <span class="k">def</span> <span class="nf">getSourceFile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span></div>
+
+<div class="viewcode-block" id="StatementSequence.getLength"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.getLength">[docs]</a>    <span class="k">def</span> <span class="nf">getLength</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="StatementSequence.addStatement"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.addStatement">[docs]</a>    <span class="k">def</span> <span class="nf">addStatement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">statement</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sequence</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span> <span class="o">=</span> <span class="n">statement</span><span class="o">.</span><span class="n">getSourceFile</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_file</span> <span class="o">==</span> <span class="n">statement</span><span class="o">.</span><span class="n">getSourceFile</span><span class="p">())</span></div>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sequence</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sequence</span><span class="o">.</span><span class="fm">__len__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+
+    <span class="c1"># Line counting/getting operations</span>
+
+<div class="viewcode-block" id="StatementSequence.getSourceLines"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.getSourceLines">[docs]</a>    <span class="k">def</span> <span class="nf">getSourceLines</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">statement</span><span class="o">.</span><span class="n">getSourceLines</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="StatementSequence.getLineNumbers"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.getLineNumbers">[docs]</a>    <span class="k">def</span> <span class="nf">getLineNumbers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO: Unused</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">statement</span><span class="o">.</span><span class="n">getLineNumbers</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="StatementSequence.getCoveredLineNumbers"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.getCoveredLineNumbers">[docs]</a>    <span class="k">def</span> <span class="nf">getCoveredLineNumbers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="StatementSequence.getCoveredLineNumbersCount"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.getCoveredLineNumbersCount">[docs]</a>    <span class="k">def</span> <span class="nf">getCoveredLineNumbersCount</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="StatementSequence.getLineNumberHashables"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.getLineNumberHashables">[docs]</a>    <span class="k">def</span> <span class="nf">getLineNumberHashables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return covered line numbers as (source_file, line_number)</span>
+
+<span class="sd">        Return tuples so aggregating line numbers from different files will not</span>
+<span class="sd">        overwrite line numbers from different files.</span>
+
+<span class="sd">        .. todo:: rename function to getCoveredLineNumbersSourceFile ? or merge</span>
+<span class="sd">            with getCoveredLineNumbers by adding a parameter ?</span>
+
+<span class="sd">        :returns: List of covered line numbers</span>
+<span class="sd">        :rtype: {List[Tuple[str, int]]}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">source_file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getSourceFile</span><span class="p">()</span><span class="o">.</span><span class="n">getFileName</span><span class="p">()</span>
+        <span class="n">line_numbers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">set</span><span class="p">([(</span><span class="n">source_file_name</span><span class="p">,</span> <span class="n">line_number</span><span class="p">)</span> <span class="k">for</span> <span class="n">line_number</span> <span class="ow">in</span> <span class="n">line_numbers</span><span class="p">])</span></div>
+
+
+    <span class="c1"># Tree operation</span>
+
+<div class="viewcode-block" id="StatementSequence.constructTree"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.constructTree">[docs]</a>    <span class="k">def</span> <span class="nf">constructTree</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a tree where childrens are the element of the sequence.</span>
+
+<span class="sd">        Used in PairSequences to compute distance between two sequences.</span>
+
+<span class="sd">        :returns: A tree containing every element of the sequence.</span>
+<span class="sd">        :rtype: {AbstractSyntaxTree}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="n">AbstractSyntaxTree</span><span class="p">(</span><span class="s1">&#39;__SEQUENCE__&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="n">tree</span><span class="o">.</span><span class="n">addChild</span><span class="p">(</span><span class="n">statement</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">tree</span></div>
+
+<div class="viewcode-block" id="StatementSequence.getAncestors"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.getAncestors">[docs]</a>    <span class="k">def</span> <span class="nf">getAncestors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return ancestors of first element</span>
+
+<span class="sd">        Used only in clone_detection_algorithm.remove_dominated_clones. Depends</span>
+<span class="sd">        on AST.getAllStatementSequences.</span>
+
+<span class="sd">        .. todo:: Why self[0], and not a set of all ancestors of every statement ?</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getAncestors</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="StatementSequence.getWeight"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.StatementSequence.getWeight">[docs]</a>    <span class="k">def</span> <span class="nf">getWeight</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Unused</span>
+
+<span class="sd">        .. todo:: AST.getCluster does not exist</span>
+<span class="sd">        .. todo:: unused</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">getCluster</span><span class="p">()</span><span class="o">.</span><span class="n">getUnifierSize</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sequence</span><span class="p">])</span></div></div>
+
+
+<div class="viewcode-block" id="PairSequences"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.PairSequences">[docs]</a><span class="k">class</span> <span class="nc">PairSequences</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequences</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sequences</span> <span class="o">=</span> <span class="n">sequences</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sequences</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">])</span>
+
+<div class="viewcode-block" id="PairSequences.getWeight"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.PairSequences.getWeight">[docs]</a>    <span class="k">def</span> <span class="nf">getWeight</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Unused</span>
+
+<span class="sd">        .. todo:: unused</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getWeight</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getWeight</span><span class="p">())</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getWeight</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="PairSequences.calcDistance"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.PairSequences.calcDistance">[docs]</a>    <span class="k">def</span> <span class="nf">calcDistance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">anti_unification</span>
+        <span class="n">trees</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">constructTree</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">]</span>
+        <span class="n">unifier</span> <span class="o">=</span> <span class="n">anti_unification</span><span class="o">.</span><span class="n">Unifier</span><span class="p">(</span><span class="n">trees</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">trees</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">unifier</span><span class="o">.</span><span class="n">getSize</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="PairSequences.subSequence"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.PairSequences.subSequence">[docs]</a>    <span class="k">def</span> <span class="nf">subSequence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">length</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PairSequences</span><span class="p">([</span><span class="n">StatementSequence</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">first</span><span class="p">:</span><span class="n">first</span> <span class="o">+</span> <span class="n">length</span><span class="p">]),</span> <span class="n">StatementSequence</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">first</span><span class="p">:</span><span class="n">first</span> <span class="o">+</span> <span class="n">length</span><span class="p">])])</span></div>
+
+<div class="viewcode-block" id="PairSequences.getLength"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.PairSequences.getLength">[docs]</a>    <span class="k">def</span> <span class="nf">getLength</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return length of first sequence</span>
+
+<span class="sd">        .. todo:: Is len(self[0]) and len(self[1]) always equal ?</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getLength</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="PairSequences.getMaxCoveredLineNumbersCount"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.abstract_syntax_tree.PairSequences.getMaxCoveredLineNumbersCount">[docs]</a>    <span class="k">def</span> <span class="nf">getMaxCoveredLineNumbersCount</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">min</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">getCoveredLineNumbersCount</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">])</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Clone Digger</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">clonedigger</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, peter_bulychev, jlachowski.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

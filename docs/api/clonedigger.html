@@ -1,0 +1,2221 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>clonedigger package &#8212; Clone Digger  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="clonedigger" href="modules.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="clonedigger-package">
+<h1>clonedigger package<a class="headerlink" href="#clonedigger-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-clonedigger.abstract_syntax_tree">
+<span id="clonedigger-abstract-syntax-tree-module"></span><h2>clonedigger.abstract_syntax_tree module<a class="headerlink" href="#module-clonedigger.abstract_syntax_tree" title="Permalink to this headline">¶</a></h2>
+<p>abstract_syntax_tree module</p>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">What do free_variable_cost represent ?</p>
+</div>
+<div class="admonition-todo admonition" id="index-1">
+<p class="first admonition-title">Todo</p>
+<p class="last">Move free_variable_cost to FreeVariable.free_variable_cost</p>
+</div>
+<dl class="class">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree">
+<em class="property">class </em><code class="descclassname">clonedigger.abstract_syntax_tree.</code><code class="descname">AbstractSyntaxTree</code><span class="sig-paren">(</span><em>name=None</em>, <em>line_numbers=[]</em>, <em>source_file=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Tree structure representing code.</p>
+<p>From (Bulychev et al., 2008): II. A.
+Strictly speaking, the abstract syntax trees we use are not always trees, since
+leaves containing the same variable references may be merged, […].</p>
+<p>A statement (stmt) is a node in the tree that contains an particular tree of code.
+It is defined by the Language, see <a class="reference external" href="https://docs.python.org/2/reference/simple_stmts.html">simple statements</a>
+and <a class="reference external" href="https://docs.python.org/2/reference/compound_stmts.html">compound statements</a>.
+A (really) non exhaustive example (made by printing a tree):</p>
+<ul class="simple">
+<li>a class is a statement</li>
+<li>an assignement using only builtin operation is a statement</li>
+<li>__init__ function is a statement</li>
+<li>global is a statement</li>
+</ul>
+<p>But:</p>
+<ul class="simple">
+<li>a += is not a statement</li>
+<li>return is not</li>
+<li>calling a function is not</li>
+<li>print is not</li>
+<li>defining a function is not</li>
+</ul>
+<div class="admonition-todo admonition" id="index-2">
+<p class="first admonition-title">Todo</p>
+<p class="last">Why is += not a stmt, as it is a simple stmt according to the reference.
+Same for function definition.</p>
+</div>
+<div class="admonition-todo admonition" id="index-3">
+<p class="first admonition-title">Todo</p>
+<p class="last">self._line_numbers is only used to initialize _covered_line_numbers
+in self.propagateCoveredLineNumbers. Remove the attribute and initialize
+_covered_line_numbers ?</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>_name</strong> (<em>str</em>) – Name of the node</li>
+<li><strong>_source_file</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.SourceFile" title="clonedigger.abstract_syntax_tree.SourceFile"><em>SourceFile</em></a>) – SourceFile containing this tree</li>
+<li><strong>_line_numbers</strong> (<em>List</em><em>[</em><em>int</em><em>]</em>) – Index of lines covered by the tree.</li>
+<li><strong>_covered_line_numbers</strong> (<em>List</em><em>[</em><em>int</em><em>]</em>) – Line covered by the tree and subtrees</li>
+<li><strong>_is_statement</strong> (<em>bool</em>) – This tree is a statement</li>
+<li><strong>_hash</strong> (<em>int</em>) – Hash of the tree</li>
+<li><strong>_mark</strong> (<a class="reference internal" href="#clonedigger.anti_unification.Cluster" title="clonedigger.anti_unification.Cluster"><em>Cluster</em></a>) – Used for clustering</li>
+<li><strong>_parent</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – Parent node</li>
+<li><strong>_childs</strong> (<em>List</em><em>[</em><a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a><em>]</em>) – List of child nodes</li>
+<li><strong>_height</strong> (<em>int</em>) – Depth of the tree</li>
+<li><strong>_size</strong> (<em>float</em>) – Number of node + free variable costs</li>
+<li><strong>_none_count</strong> (<em>int</em>) – Number of None node in subtrees</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.addChild">
+<code class="descname">addChild</code><span class="sig-paren">(</span><em>child</em>, <em>save_parent=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.addChild"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.addChild" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a child and set its parent to self if save_parent</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>child</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – Child to add</li>
+<li><strong>save_parent</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set child’s parent to self, defaults to False</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getAllStatementSequences">
+<code class="descname">getAllStatementSequences</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getAllStatementSequences"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getAllStatementSequences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return sequences of statement that cover at least <em>arguments.size_threshold</em> lines.</p>
+<p>Recursively search for statements, a new sequence is created when the lines
+covered by the sequence exceeds arguments.size_threshold.</p>
+<div class="admonition-todo admonition" id="index-4">
+<p class="first admonition-title">Todo</p>
+<p class="last">Are the sequence in a specific order and what do they represent ?</p>
+</div>
+<div class="admonition-todo admonition" id="index-5">
+<p class="first admonition-title">Todo</p>
+<p class="last">Is it possible that a subtree <cite>s</cite> of <cite>t</cite> and <cite>t</cite> are in the same sequence ?</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">todo:</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{List[<a class="reference internal" href="#clonedigger.abstract_syntax_tree.StatementSequence" title="clonedigger.abstract_syntax_tree.StatementSequence">StatementSequence</a>]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getAncestors">
+<code class="descname">getAncestors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getAncestors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getAncestors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return ancestors which are statements.</p>
+<p>Used only in StatementSequence.getAncestors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Ancestors that are statements</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{List[<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree">AbstractSyntaxTree</a>]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getChildCount">
+<code class="descname">getChildCount</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getChildCount"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getChildCount" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getChilds">
+<code class="descname">getChilds</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getChilds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getChilds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getCoveredLineNumbers">
+<code class="descname">getCoveredLineNumbers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getCoveredLineNumbers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getCoveredLineNumbers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getDCupHash">
+<code class="descname">getDCupHash</code><span class="sig-paren">(</span><em>level</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getDCupHash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getDCupHash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute a hash using child nodes</p>
+<p>The hash is computed by summing per node hashes. A node hash is made of
+the depth of the node, the name and the number of child.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>level</strong> (<em>int</em>) – maximum depth to compute hash</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a tree hash</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{int}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getFullHash">
+<code class="descname">getFullHash</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getFullHash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getFullHash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute a hash for the whole tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a tree hash</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{int}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getHeight">
+<code class="descname">getHeight</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getHeight"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getHeight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return height for this tree</p>
+<p>The height is the maximum depth of the tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Height of tree</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{int}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getLineNumbers">
+<code class="descname">getLineNumbers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getLineNumbers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getLineNumbers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getMark">
+<code class="descname">getMark</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getMark"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getMark" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getName"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getParent">
+<code class="descname">getParent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getParent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getParent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getSize">
+<code class="descname">getSize</code><span class="sig-paren">(</span><em>ignore_none=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return number of nodes and free variables cost</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ignore_none</strong> (<em>bool</em><em>, </em><em>optional</em>) – Do not account for None nodes, defaults to True</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">size of tree</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{float}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getSourceFile">
+<code class="descname">getSourceFile</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getSourceFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getSourceFile" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getSourceLines">
+<code class="descname">getSourceLines</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getSourceLines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getSourceLines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return source lines covered by the tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A list of lines</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{List[str]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getTokenCount">
+<code class="descname">getTokenCount</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.getTokenCount"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.getTokenCount" title="Permalink to this definition">¶</a></dt>
+<dd><p>Count certain tokens in tree</p>
+<p>Tokens are listed below</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Number of tokens</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{int}</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition-todo admonition" id="index-6">
+<p class="first admonition-title">Todo</p>
+<p class="last">What is this ? <cite>t.getName()[0] != “’” and t.getName() != ‘Pass’</cite></p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.isStatement">
+<code class="descname">isStatement</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.isStatement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.isStatement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.markAsStatement">
+<code class="descname">markAsStatement</code><span class="sig-paren">(</span><em>val=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.markAsStatement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.markAsStatement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.propagateCoveredLineNumbers">
+<code class="descname">propagateCoveredLineNumbers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.propagateCoveredLineNumbers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.propagateCoveredLineNumbers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute self._covered_line_numbers for self and childrens</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A set of line numbers</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{Set[int]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.propagateHeight">
+<code class="descname">propagateHeight</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.propagateHeight"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.propagateHeight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute height for this tree</p>
+<p>The height is the maximum depth of the tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Height of self</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{int}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.setMark">
+<code class="descname">setMark</code><span class="sig-paren">(</span><em>mark</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.setMark"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.setMark" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.setName">
+<code class="descname">setName</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.setName"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.setName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.setParent">
+<code class="descname">setParent</code><span class="sig-paren">(</span><em>parent</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.setParent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.setParent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.AbstractSyntaxTree.storeSize">
+<code class="descname">storeSize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#AbstractSyntaxTree.storeSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree.storeSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the number of nodes and free variables cost recursively</p>
+<p>The number of nodes and <cite>free_variable_cost</cite>, also compute the number
+of None node</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Size of tree</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{float}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.abstract_syntax_tree.PairSequences">
+<em class="property">class </em><code class="descclassname">clonedigger.abstract_syntax_tree.</code><code class="descname">PairSequences</code><span class="sig-paren">(</span><em>sequences</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#PairSequences"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.PairSequences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.PairSequences.calcDistance">
+<code class="descname">calcDistance</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#PairSequences.calcDistance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.PairSequences.calcDistance" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.PairSequences.getLength">
+<code class="descname">getLength</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#PairSequences.getLength"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.PairSequences.getLength" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return length of first sequence</p>
+<div class="admonition-todo admonition" id="index-7">
+<p class="first admonition-title">Todo</p>
+<p class="last">Is len(self[0]) and len(self[1]) always equal ?</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.PairSequences.getMaxCoveredLineNumbersCount">
+<code class="descname">getMaxCoveredLineNumbersCount</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#PairSequences.getMaxCoveredLineNumbersCount"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.PairSequences.getMaxCoveredLineNumbersCount" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.PairSequences.getWeight">
+<code class="descname">getWeight</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#PairSequences.getWeight"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.PairSequences.getWeight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unused</p>
+<div class="admonition-todo admonition" id="index-8">
+<p class="first admonition-title">Todo</p>
+<p class="last">unused</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.PairSequences.subSequence">
+<code class="descname">subSequence</code><span class="sig-paren">(</span><em>first</em>, <em>length</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#PairSequences.subSequence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.PairSequences.subSequence" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.abstract_syntax_tree.SourceFile">
+<em class="property">class </em><code class="descclassname">clonedigger.abstract_syntax_tree.</code><code class="descname">SourceFile</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#SourceFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.SourceFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Abstract class that create AST from a code file.</p>
+<p>Read a code file, parse it and create a corresponding AST.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>_source_lines</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – Original lines of the source file.</li>
+<li><strong>_file_name</strong> (<em>str</em>) – Name of the source file.</li>
+<li><strong>_tree</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – AST representing the source file.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.SourceFile._setTree">
+<code class="descname">_setTree</code><span class="sig-paren">(</span><em>tree</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#SourceFile._setTree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.SourceFile._setTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.abstract_syntax_tree.SourceFile.distance_threshold">
+<code class="descname">distance_threshold</code><em class="property"> = 5</em><a class="headerlink" href="#clonedigger.abstract_syntax_tree.SourceFile.distance_threshold" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maximum edit distance of a clone.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.SourceFile.getFileName">
+<code class="descname">getFileName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#SourceFile.getFileName"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.SourceFile.getFileName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.SourceFile.getSourceLine">
+<code class="descname">getSourceLine</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#SourceFile.getSourceLine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.SourceFile.getSourceLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return n-th line of the file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int</em>) – Line number</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">n-th line of self._file_name</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{str}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.SourceFile.getTree">
+<code class="descname">getTree</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#SourceFile.getTree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.SourceFile.getTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.abstract_syntax_tree.SourceFile.size_threshold">
+<code class="descname">size_threshold</code><em class="property"> = 5</em><a class="headerlink" href="#clonedigger.abstract_syntax_tree.SourceFile.size_threshold" title="Permalink to this definition">¶</a></dt>
+<dd><p>Minimum number of covered lines of a clone.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence">
+<em class="property">class </em><code class="descclassname">clonedigger.abstract_syntax_tree.</code><code class="descname">StatementSequence</code><span class="sig-paren">(</span><em>sequence=[]</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Holds a sequence of statements (AST)</p>
+<p>Used in suffix_tree.SuffixTree to find patterns in code.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>_sequence</strong> (<em>List</em><em>[</em><a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a><em>]</em>) – A sequence of Statement.</li>
+<li><strong>_source_file</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.SourceFile" title="clonedigger.abstract_syntax_tree.SourceFile"><em>SourceFile</em></a>) – Source file Statements are from.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.addStatement">
+<code class="descname">addStatement</code><span class="sig-paren">(</span><em>statement</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.addStatement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.addStatement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.constructTree">
+<code class="descname">constructTree</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.constructTree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.constructTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a tree where childrens are the element of the sequence.</p>
+<p>Used in PairSequences to compute distance between two sequences.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A tree containing every element of the sequence.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{AbstractSyntaxTree}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.getAncestors">
+<code class="descname">getAncestors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.getAncestors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.getAncestors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return ancestors of first element</p>
+<p>Used only in clone_detection_algorithm.remove_dominated_clones. Depends
+on AST.getAllStatementSequences.</p>
+<div class="admonition-todo admonition" id="index-9">
+<p class="first admonition-title">Todo</p>
+<p class="last">Why self[0], and not a set of all ancestors of every statement ?</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.getCoveredLineNumbers">
+<code class="descname">getCoveredLineNumbers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.getCoveredLineNumbers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.getCoveredLineNumbers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.getCoveredLineNumbersCount">
+<code class="descname">getCoveredLineNumbersCount</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.getCoveredLineNumbersCount"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.getCoveredLineNumbersCount" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.getLength">
+<code class="descname">getLength</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.getLength"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.getLength" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.getLineNumberHashables">
+<code class="descname">getLineNumberHashables</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.getLineNumberHashables"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.getLineNumberHashables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return covered line numbers as (source_file, line_number)</p>
+<p>Return tuples so aggregating line numbers from different files will not
+overwrite line numbers from different files.</p>
+<div class="admonition-todo admonition" id="index-10">
+<p class="first admonition-title">Todo</p>
+<p class="last">rename function to getCoveredLineNumbersSourceFile ? or merge
+with getCoveredLineNumbers by adding a parameter ?</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">List of covered line numbers</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{List[Tuple[str, int]]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.getLineNumbers">
+<code class="descname">getLineNumbers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.getLineNumbers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.getLineNumbers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.getSourceFile">
+<code class="descname">getSourceFile</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.getSourceFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.getSourceFile" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.getSourceLines">
+<code class="descname">getSourceLines</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.getSourceLines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.getSourceLines" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.getWeight">
+<code class="descname">getWeight</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.getWeight"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.getWeight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unused</p>
+<div class="admonition-todo admonition" id="index-11">
+<p class="first admonition-title">Todo</p>
+<p class="last">AST.getCluster does not exist</p>
+</div>
+<div class="admonition-todo admonition" id="index-12">
+<p class="first admonition-title">Todo</p>
+<p class="last">unused</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.abstract_syntax_tree.StatementSequence.isEmpty">
+<code class="descname">isEmpty</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#StatementSequence.isEmpty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.StatementSequence.isEmpty" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.abstract_syntax_tree.filter_func">
+<code class="descclassname">clonedigger.abstract_syntax_tree.</code><code class="descname">filter_func</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/abstract_syntax_tree.html#filter_func"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.abstract_syntax_tree.filter_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove trailing whitespace if begins with non space characters</p>
+<div class="admonition-todo admonition" id="index-13">
+<p class="first admonition-title">Todo</p>
+<p class="last">Equivalent of re.sub(r’[^s]+)s*’, r’’, s) ?</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>s</strong> (<em>str</em>) – String to be filtered</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Trimmed string</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{str}</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">filter_func</span><span class="p">(</span><span class="s1">&#39;def function(): </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">&#39;def function():&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">filter_func</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1"> </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">&#39;\n \n&#39;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-clonedigger.anti_unification">
+<span id="clonedigger-anti-unification-module"></span><h2>clonedigger.anti_unification module<a class="headerlink" href="#module-clonedigger.anti_unification" title="Permalink to this headline">¶</a></h2>
+<p>anti_unification module</p>
+<dl class="class">
+<dt id="clonedigger.anti_unification.Cluster">
+<em class="property">class </em><code class="descclassname">clonedigger.anti_unification.</code><code class="descname">Cluster</code><span class="sig-paren">(</span><em>tree=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Cluster"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Cluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Create a cluster consisting of AbstractSyntaxTree</p>
+<p>TODO: how it is used</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>tree</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a><em>, </em><em>optional</em>) – First element to add, defaults to None</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="clonedigger.anti_unification.Cluster.addWithoutUnification">
+<code class="descname">addWithoutUnification</code><span class="sig-paren">(</span><em>tree</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Cluster.addWithoutUnification"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Cluster.addWithoutUnification" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add tree to cluster without updating unifier_tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>tree</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – Tree</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.anti_unification.Cluster.count">
+<code class="descname">count</code><em class="property"> = 0</em><a class="headerlink" href="#clonedigger.anti_unification.Cluster.count" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Cluster.eraseAllTrees">
+<code class="descname">eraseAllTrees</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Cluster.eraseAllTrees"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Cluster.eraseAllTrees" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Cluster.getAddCost">
+<code class="descname">getAddCost</code><span class="sig-paren">(</span><em>tree</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Cluster.getAddCost"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Cluster.getAddCost" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the cost of adding a tree to the cluster.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>tree</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – tree</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Cluster.getCount">
+<code class="descname">getCount</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Cluster.getCount"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Cluster.getCount" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Cluster.getMaxCoveredLines">
+<code class="descname">getMaxCoveredLines</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Cluster.getMaxCoveredLines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Cluster.getMaxCoveredLines" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Cluster.getUnifierSize">
+<code class="descname">getUnifierSize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Cluster.getUnifierSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Cluster.getUnifierSize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Cluster.getUnifierTree">
+<code class="descname">getUnifierTree</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Cluster.getUnifierTree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Cluster.getUnifierTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Cluster.unify">
+<code class="descname">unify</code><span class="sig-paren">(</span><em>tree</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Cluster.unify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Cluster.unify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add tree to cluster by unifying cluster’s unifier with <cite>tree</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>tree</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – Tree</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.anti_unification.FreeVariable">
+<em class="property">class </em><code class="descclassname">clonedigger.anti_unification.</code><code class="descname">FreeVariable</code><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#FreeVariable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><code class="xref py py-class docutils literal notranslate"><span class="pre">clonedigger.abstract_syntax_tree.AbstractSyntaxTree</span></code></a></p>
+<p>AST node used as placeholder for anti-unifiyng.</p>
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.addChild">
+<code class="descname">addChild</code><span class="sig-paren">(</span><em>child</em>, <em>save_parent=False</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.addChild" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a child and set its parent to self if save_parent</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>child</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – Child to add</li>
+<li><strong>save_parent</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set child’s parent to self, defaults to False</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.anti_unification.FreeVariable.free_variables_count">
+<code class="descname">free_variables_count</code><em class="property"> = 1</em><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.free_variables_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Count instanciation of this object</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getAllStatementSequences">
+<code class="descname">getAllStatementSequences</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getAllStatementSequences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return sequences of statement that cover at least <em>arguments.size_threshold</em> lines.</p>
+<p>Recursively search for statements, a new sequence is created when the lines
+covered by the sequence exceeds arguments.size_threshold.</p>
+<div class="admonition-todo admonition" id="index-14">
+<p class="first admonition-title">Todo</p>
+<p class="last">Are the sequence in a specific order and what do they represent ?</p>
+</div>
+<div class="admonition-todo admonition" id="index-15">
+<p class="first admonition-title">Todo</p>
+<p class="last">Is it possible that a subtree <cite>s</cite> of <cite>t</cite> and <cite>t</cite> are in the same sequence ?</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">todo:</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{List[<a class="reference internal" href="#clonedigger.abstract_syntax_tree.StatementSequence" title="clonedigger.abstract_syntax_tree.StatementSequence">StatementSequence</a>]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getAncestors">
+<code class="descname">getAncestors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getAncestors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return ancestors which are statements.</p>
+<p>Used only in StatementSequence.getAncestors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Ancestors that are statements</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{List[<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree">AbstractSyntaxTree</a>]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getChildCount">
+<code class="descname">getChildCount</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getChildCount" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getChilds">
+<code class="descname">getChilds</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getChilds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getCoveredLineNumbers">
+<code class="descname">getCoveredLineNumbers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getCoveredLineNumbers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getDCupHash">
+<code class="descname">getDCupHash</code><span class="sig-paren">(</span><em>level</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getDCupHash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute a hash using child nodes</p>
+<p>The hash is computed by summing per node hashes. A node hash is made of
+the depth of the node, the name and the number of child.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>level</strong> (<em>int</em>) – maximum depth to compute hash</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a tree hash</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{int}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getFullHash">
+<code class="descname">getFullHash</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getFullHash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute a hash for the whole tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a tree hash</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{int}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getHeight">
+<code class="descname">getHeight</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getHeight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return height for this tree</p>
+<p>The height is the maximum depth of the tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Height of tree</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{int}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getLineNumbers">
+<code class="descname">getLineNumbers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getLineNumbers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getMark">
+<code class="descname">getMark</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getMark" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getParent">
+<code class="descname">getParent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getParent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getSize">
+<code class="descname">getSize</code><span class="sig-paren">(</span><em>ignore_none=True</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return number of nodes and free variables cost</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ignore_none</strong> (<em>bool</em><em>, </em><em>optional</em>) – Do not account for None nodes, defaults to True</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">size of tree</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{float}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getSourceFile">
+<code class="descname">getSourceFile</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getSourceFile" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getSourceLines">
+<code class="descname">getSourceLines</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getSourceLines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return source lines covered by the tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A list of lines</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{List[str]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.getTokenCount">
+<code class="descname">getTokenCount</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.getTokenCount" title="Permalink to this definition">¶</a></dt>
+<dd><p>Count certain tokens in tree</p>
+<p>Tokens are listed below</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Number of tokens</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{int}</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition-todo admonition" id="index-16">
+<p class="first admonition-title">Todo</p>
+<p class="last">What is this ? <cite>t.getName()[0] != “’” and t.getName() != ‘Pass’</cite></p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.isStatement">
+<code class="descname">isStatement</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.isStatement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.markAsStatement">
+<code class="descname">markAsStatement</code><span class="sig-paren">(</span><em>val=True</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.markAsStatement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.propagateCoveredLineNumbers">
+<code class="descname">propagateCoveredLineNumbers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.propagateCoveredLineNumbers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute self._covered_line_numbers for self and childrens</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A set of line numbers</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{Set[int]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.propagateHeight">
+<code class="descname">propagateHeight</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.propagateHeight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute height for this tree</p>
+<p>The height is the maximum depth of the tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Height of self</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{int}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.setMark">
+<code class="descname">setMark</code><span class="sig-paren">(</span><em>mark</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.setMark" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.setName">
+<code class="descname">setName</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.setName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.setParent">
+<code class="descname">setParent</code><span class="sig-paren">(</span><em>parent</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.setParent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.FreeVariable.storeSize">
+<code class="descname">storeSize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.anti_unification.FreeVariable.storeSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the number of nodes and free variables cost recursively</p>
+<p>The number of nodes and <cite>free_variable_cost</cite>, also compute the number
+of None node</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Size of tree</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{float}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.anti_unification.Substitution">
+<em class="property">class </em><code class="descclassname">clonedigger.anti_unification.</code><code class="descname">Substitution</code><span class="sig-paren">(</span><em>initial_value=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Substitution"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Substitution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Dict[AbstractSyntaxTree, AbstractSyntaxTree] that replace recursively a
+tree by another.</p>
+<p>TODO: This could extend dict</p>
+<dl class="method">
+<dt id="clonedigger.anti_unification.Substitution.getMap">
+<code class="descname">getMap</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Substitution.getMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Substitution.getMap" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Substitution.getSize">
+<code class="descname">getSize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Substitution.getSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Substitution.getSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute size of a substitution.</p>
+<p>It is the sum of the size of the trees in substitution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Size of substitution.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">{float}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Substitution.substitute">
+<code class="descname">substitute</code><span class="sig-paren">(</span><em>tree</em>, <em>without_copying=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Substitution.substitute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Substitution.substitute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recursively replace trees by substitution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>tree</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – Tree to be substituted.</li>
+<li><strong>without_copying</strong> (<em>bool</em><em>, </em><em>optional</em>) – Return tree pointers, defaults to False</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Substituated tree</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">{AbstractSyntaxTree}</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.anti_unification.Unifier">
+<em class="property">class </em><code class="descclassname">clonedigger.anti_unification.</code><code class="descname">Unifier</code><span class="sig-paren">(</span><em>t1</em>, <em>t2</em>, <em>ignore_parametrization=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Unifier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Unifier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An anti-unifier is a tree that generalize other trees (2) using placeholder.</p>
+<p class="rubric">Example</p>
+<p>Tree 1:       <cite>Add (Name (i), Name (j))</cite>
+Tree 2:       <cite>Add (Name (n), Const (1))</cite>
+Anti-unifier: <cite>Add (Name (?1 ), ?2 )</cite></p>
+<dl class="docutils">
+<dt>Used in:</dt>
+<dd><ul class="first last simple">
+<li>abstract_syntax_tree.PairSequences: used to compute distance between 2 trees</li>
+<li>anti_unification.Cluster: used to add trees to cluster</li>
+<li>report.Report: to know if there is a substitution between two code fragment and display them red or cyan</li>
+</ul>
+</dd>
+</dl>
+<p>From (Bulychev et al., 2008) II. A.:
+As the name suggests, given two terms, it produces a more general one that
+covers both rather than a more specific one as in unification. Let E1 and E2 be
+two terms. Term E is a generalization of E1 and E2 if there exist two
+substitutions σ1 and σ2 such that σ1(E) = E1 and σ2(E) = E2. The most specific
+generalization of E1 and E2 is called anti-unifier. The process of finding an
+anti-unifier is called anti-unification.
+[…]
+The anti-unifier tree of two trees T1 and T2 is obtained by replacing some
+subtrees in T1 and T2 by special nodes, containing term placeholders which are
+marked with integers. We will represent such nodes as ?n. For example, the
+anti-unifier of <cite>Add (Name (i), Name (j))</cite> and <cite>Add (Name (n), Const (1))</cite> will
+be <cite>Add (Name (?1 ), ?2 )</cite>.
+In some abstract syntax tree representations occurrences of the same variable
+refer to the same leaf in a tree. In this case the anti-unifier of
+<cite>Add(Name(i),Name(i))</cite> and <cite>Add(Name(j),Name(j))</cite> will be <cite>Add(Name(?1),Name(?1))</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>t1</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – Tree 1</li>
+<li><strong>t2</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – Tree 2</li>
+<li><strong>ignore_parametrization</strong> (<em>bool</em><em>, </em><em>optional</em>) – todo:</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="clonedigger.anti_unification.Unifier._combineSubs">
+<code class="descname">_combineSubs</code><span class="sig-paren">(</span><em>node</em>, <em>s</em>, <em>t</em>, <em>ignore_parametrization=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Unifier._combineSubs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Unifier._combineSubs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Aggregate substitutions.</p>
+<p>Given an anti-unifier and two substitutions,
+modify node by replacing trees if the substittion are the same.
+If ignore_parametrization is True, this function morally performs <cite>t.update(s)</cite>.
+Else: some keys are not updated, but they will modify the <cite>node</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>node</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – anti-unifier</li>
+<li><strong>s</strong> (<em>Tuple</em><em>[</em><a class="reference internal" href="#clonedigger.anti_unification.Substitution" title="clonedigger.anti_unification.Substitution"><em>Substitution</em></a><em>,</em><a class="reference internal" href="#clonedigger.anti_unification.Substitution" title="clonedigger.anti_unification.Substitution"><em>Substitution</em></a><em>]</em><em>]</em>) – A substitution to use as update</li>
+<li><strong>t</strong> (<em>Tuple</em><em>[</em><a class="reference internal" href="#clonedigger.anti_unification.Substitution" title="clonedigger.anti_unification.Substitution"><em>Substitution</em></a><em>,</em><a class="reference internal" href="#clonedigger.anti_unification.Substitution" title="clonedigger.anti_unification.Substitution"><em>Substitution</em></a><em>]</em><em>]</em>) – A substitution to update</li>
+<li><strong>ignore_parametrization</strong> (<em>bool</em><em>, </em><em>optional</em>) – TODO:, defaults to False</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">an updated unifier</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">{Tuple[<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree">AbstractSyntaxTree</a>, Tuple[<a class="reference internal" href="#clonedigger.anti_unification.Substitution" title="clonedigger.anti_unification.Substitution">Substitution</a>,<a class="reference internal" href="#clonedigger.anti_unification.Substitution" title="clonedigger.anti_unification.Substitution">Substitution</a>]]}</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Unifier._unify">
+<code class="descname">_unify</code><span class="sig-paren">(</span><em>node1</em>, <em>node2</em>, <em>ignore_parametrization</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Unifier._unify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Unifier._unify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create anti-unifier for node1 and node2.</p>
+<p>Recursively create an anti-unifier using substitutions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>node1</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – Tree to be anti-unified</li>
+<li><strong>node2</strong> (<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a>) – Tree to be anti-unified</li>
+<li><strong>ignore_parametrization</strong> (<em>bool</em>) – todo:</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">An anti-unifier and the substitutions performed.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">{Tuple[<a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree">AbstractSyntaxTree</a>, Tuple[<a class="reference internal" href="#clonedigger.anti_unification.Substitution" title="clonedigger.anti_unification.Substitution">Substitution</a>,<a class="reference internal" href="#clonedigger.anti_unification.Substitution" title="clonedigger.anti_unification.Substitution">Substitution</a>]]}</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Unifier.getSize">
+<code class="descname">getSize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Unifier.getSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Unifier.getSize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Unifier.getSubstitutions">
+<code class="descname">getSubstitutions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Unifier.getSubstitutions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Unifier.getSubstitutions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.anti_unification.Unifier.getUnifier">
+<code class="descname">getUnifier</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/anti_unification.html#Unifier.getUnifier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.anti_unification.Unifier.getUnifier" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-clonedigger.antlr_sourcefile">
+<span id="clonedigger-antlr-sourcefile-module"></span><h2>clonedigger.antlr_sourcefile module<a class="headerlink" href="#module-clonedigger.antlr_sourcefile" title="Permalink to this headline">¶</a></h2>
+<p>antlk_sourcefile module</p>
+<dl class="class">
+<dt id="clonedigger.antlr_sourcefile.ANTLRSourceFile">
+<em class="property">class </em><code class="descclassname">clonedigger.antlr_sourcefile.</code><code class="descname">ANTLRSourceFile</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/antlr_sourcefile.html#ANTLRSourceFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#clonedigger.abstract_syntax_tree.SourceFile" title="clonedigger.abstract_syntax_tree.SourceFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">clonedigger.abstract_syntax_tree.SourceFile</span></code></a></p>
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.ANTLRSourceFile._setTree">
+<code class="descname">_setTree</code><span class="sig-paren">(</span><em>tree</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile._setTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.ANTLRSourceFile.distance_threshold">
+<code class="descname">distance_threshold</code><em class="property"> = 5</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile.distance_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.ANTLRSourceFile.getFileName">
+<code class="descname">getFileName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile.getFileName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.ANTLRSourceFile.getSourceLine">
+<code class="descname">getSourceLine</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile.getSourceLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return n-th line of the file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int</em>) – Line number</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">n-th line of self._file_name</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{str}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.ANTLRSourceFile.getTree">
+<code class="descname">getTree</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile.getTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.ANTLRSourceFile.parse">
+<code class="descname">parse</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/antlr_sourcefile.html#ANTLRSourceFile.parse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile.parse" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.ANTLRSourceFile.size_threshold">
+<code class="descname">size_threshold</code><em class="property"> = 5</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile.size_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.antlr_sourcefile.ExpatHandler">
+<em class="property">class </em><code class="descclassname">clonedigger.antlr_sourcefile.</code><code class="descname">ExpatHandler</code><span class="sig-paren">(</span><em>start_node</em>, <em>parent</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/antlr_sourcefile.html#ExpatHandler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.antlr_sourcefile.ExpatHandler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.ExpatHandler.end_element">
+<code class="descname">end_element</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/antlr_sourcefile.html#ExpatHandler.end_element"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.antlr_sourcefile.ExpatHandler.end_element" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.ExpatHandler.start_element">
+<code class="descname">start_element</code><span class="sig-paren">(</span><em>xml_node_name</em>, <em>attrs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/antlr_sourcefile.html#ExpatHandler.start_element"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.antlr_sourcefile.ExpatHandler.start_element" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.antlr_sourcefile.JavaANTLRSourceFile">
+<em class="property">class </em><code class="descclassname">clonedigger.antlr_sourcefile.</code><code class="descname">JavaANTLRSourceFile</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/antlr_sourcefile.html#JavaANTLRSourceFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.antlr_sourcefile.JavaANTLRSourceFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile" title="clonedigger.antlr_sourcefile.ANTLRSourceFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">clonedigger.antlr_sourcefile.ANTLRSourceFile</span></code></a></p>
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.JavaANTLRSourceFile._setTree">
+<code class="descname">_setTree</code><span class="sig-paren">(</span><em>tree</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.JavaANTLRSourceFile._setTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.JavaANTLRSourceFile.distance_threshold">
+<code class="descname">distance_threshold</code><em class="property"> = 7</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.JavaANTLRSourceFile.distance_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.JavaANTLRSourceFile.extension">
+<code class="descname">extension</code><em class="property"> = 'java'</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.JavaANTLRSourceFile.extension" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.JavaANTLRSourceFile.getFileName">
+<code class="descname">getFileName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.JavaANTLRSourceFile.getFileName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.JavaANTLRSourceFile.getSourceLine">
+<code class="descname">getSourceLine</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.JavaANTLRSourceFile.getSourceLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return n-th line of the file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int</em>) – Line number</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">n-th line of self._file_name</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{str}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.JavaANTLRSourceFile.getTree">
+<code class="descname">getTree</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.JavaANTLRSourceFile.getTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.JavaANTLRSourceFile.parse">
+<code class="descname">parse</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.JavaANTLRSourceFile.parse" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.JavaANTLRSourceFile.size_threshold">
+<code class="descname">size_threshold</code><em class="property"> = 10</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.JavaANTLRSourceFile.size_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.antlr_sourcefile.JsANTLRSourceFile">
+<em class="property">class </em><code class="descclassname">clonedigger.antlr_sourcefile.</code><code class="descname">JsANTLRSourceFile</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/antlr_sourcefile.html#JsANTLRSourceFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.antlr_sourcefile.JsANTLRSourceFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile" title="clonedigger.antlr_sourcefile.ANTLRSourceFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">clonedigger.antlr_sourcefile.ANTLRSourceFile</span></code></a></p>
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.JsANTLRSourceFile._setTree">
+<code class="descname">_setTree</code><span class="sig-paren">(</span><em>tree</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.JsANTLRSourceFile._setTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.JsANTLRSourceFile.distance_threshold">
+<code class="descname">distance_threshold</code><em class="property"> = 5</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.JsANTLRSourceFile.distance_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.JsANTLRSourceFile.extension">
+<code class="descname">extension</code><em class="property"> = 'js'</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.JsANTLRSourceFile.extension" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.JsANTLRSourceFile.getFileName">
+<code class="descname">getFileName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.JsANTLRSourceFile.getFileName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.JsANTLRSourceFile.getSourceLine">
+<code class="descname">getSourceLine</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.JsANTLRSourceFile.getSourceLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return n-th line of the file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int</em>) – Line number</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">n-th line of self._file_name</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{str}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.JsANTLRSourceFile.getTree">
+<code class="descname">getTree</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.JsANTLRSourceFile.getTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.JsANTLRSourceFile.parse">
+<code class="descname">parse</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.JsANTLRSourceFile.parse" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.JsANTLRSourceFile.size_threshold">
+<code class="descname">size_threshold</code><em class="property"> = 5</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.JsANTLRSourceFile.size_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.antlr_sourcefile.LuaANTLRSourceFile">
+<em class="property">class </em><code class="descclassname">clonedigger.antlr_sourcefile.</code><code class="descname">LuaANTLRSourceFile</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/antlr_sourcefile.html#LuaANTLRSourceFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.antlr_sourcefile.LuaANTLRSourceFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#clonedigger.antlr_sourcefile.ANTLRSourceFile" title="clonedigger.antlr_sourcefile.ANTLRSourceFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">clonedigger.antlr_sourcefile.ANTLRSourceFile</span></code></a></p>
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.LuaANTLRSourceFile._setTree">
+<code class="descname">_setTree</code><span class="sig-paren">(</span><em>tree</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.LuaANTLRSourceFile._setTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.LuaANTLRSourceFile.distance_threshold">
+<code class="descname">distance_threshold</code><em class="property"> = 5</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.LuaANTLRSourceFile.distance_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.LuaANTLRSourceFile.extension">
+<code class="descname">extension</code><em class="property"> = 'lua'</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.LuaANTLRSourceFile.extension" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.LuaANTLRSourceFile.getFileName">
+<code class="descname">getFileName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.LuaANTLRSourceFile.getFileName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.LuaANTLRSourceFile.getSourceLine">
+<code class="descname">getSourceLine</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.LuaANTLRSourceFile.getSourceLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return n-th line of the file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int</em>) – Line number</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">n-th line of self._file_name</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{str}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.LuaANTLRSourceFile.getTree">
+<code class="descname">getTree</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.LuaANTLRSourceFile.getTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.antlr_sourcefile.LuaANTLRSourceFile.parse">
+<code class="descname">parse</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.antlr_sourcefile.LuaANTLRSourceFile.parse" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.antlr_sourcefile.LuaANTLRSourceFile.size_threshold">
+<code class="descname">size_threshold</code><em class="property"> = 5</em><a class="headerlink" href="#clonedigger.antlr_sourcefile.LuaANTLRSourceFile.size_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-clonedigger.arguments">
+<span id="clonedigger-arguments-module"></span><h2>clonedigger.arguments module<a class="headerlink" href="#module-clonedigger.arguments" title="Permalink to this headline">¶</a></h2>
+<p>arguments module</p>
+</div>
+<div class="section" id="module-clonedigger.ast_suppliers">
+<span id="clonedigger-ast-suppliers-module"></span><h2>clonedigger.ast_suppliers module<a class="headerlink" href="#module-clonedigger.ast_suppliers" title="Permalink to this headline">¶</a></h2>
+<p>ast_suppliers module</p>
+</div>
+<div class="section" id="module-clonedigger.clone_detection_algorithm">
+<span id="clonedigger-clone-detection-algorithm-module"></span><h2>clonedigger.clone_detection_algorithm module<a class="headerlink" href="#module-clonedigger.clone_detection_algorithm" title="Permalink to this headline">¶</a></h2>
+<p>clone_detection_algorithm module</p>
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.all_pairsubsequences_size_n_threshold">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">all_pairsubsequences_size_n_threshold</code><span class="sig-paren">(</span><em>n</em>, <em>pair_sequences</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#all_pairsubsequences_size_n_threshold"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.all_pairsubsequences_size_n_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.build_hash_to_statement">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">build_hash_to_statement</code><span class="sig-paren">(</span><em>statement_sequences</em>, <em>dcup_hash=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#build_hash_to_statement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.build_hash_to_statement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute hash for every statement</p>
+<p>Two statement can have the same hash</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>statement_sequences</strong> (<em>List</em><em>[</em><a class="reference internal" href="#clonedigger.abstract_syntax_tree.StatementSequence" title="clonedigger.abstract_syntax_tree.StatementSequence"><em>StatementSequence</em></a><em>]</em>) – Statements to compute hash</li>
+<li><strong>dcup_hash</strong> (<em>bool</em><em>, </em><em>optional</em>) – Use dcup hash, defaults to True</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A map Hash -&gt; List[Statement]</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">{Dict[int -&gt; List[Statement]]}</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.build_unifiers">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">build_unifiers</code><span class="sig-paren">(</span><em>hash_to_statement</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#build_unifiers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.build_unifiers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Populate Cluster object with Statement.</p>
+<p>Greedily add the cheapest statement to Clusters by unifying, thus creating
+Unifiers for each cluster. This clusters on hash, but finer.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>hash_to_statement</strong> (<em>Dict</em><em>[</em><em>int</em><em>, </em><em>List</em><em>[</em><a class="reference internal" href="#clonedigger.abstract_syntax_tree.AbstractSyntaxTree" title="clonedigger.abstract_syntax_tree.AbstractSyntaxTree"><em>AbstractSyntaxTree</em></a><em>]</em><em>]</em>) – Statements grouped by hash</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A list of unified Cluster</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{Dict[int, <a class="reference internal" href="#clonedigger.anti_unification.Cluster" title="clonedigger.anti_unification.Cluster">Cluster</a>]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.clusterize">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">clusterize</code><span class="sig-paren">(</span><em>hash_to_statement</em>, <em>clusters_map</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#clusterize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.clusterize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add statements to Cluster’s unifier</p>
+<p>Greedily add statements to cluster based on distance to Cluster’s unifier</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>hash_to_statement</strong> (<em>Dict</em><em>[</em><em>int</em><em>, </em><em>List</em><em>[</em><em>Statement</em><em>]</em><em>]</em>) – Statements grouped by hash</li>
+<li><strong>clusters_map</strong> (<em>Dict</em><em>[</em><em>int</em><em>, </em><em>List</em><em>[</em><a class="reference internal" href="#clonedigger.anti_unification.Cluster" title="clonedigger.anti_unification.Cluster"><em>Cluster</em></a><em>]</em><em>]</em>) – Clusters grouped by hash</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.filterOutLongEquallyLabeledSequences">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">filterOutLongEquallyLabeledSequences</code><span class="sig-paren">(</span><em>statement_sequences</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#filterOutLongEquallyLabeledSequences"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.filterOutLongEquallyLabeledSequences" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.filterOutLongSequences">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">filterOutLongSequences</code><span class="sig-paren">(</span><em>statement_sequences</em>, <em>max_length</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#filterOutLongSequences"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.filterOutLongSequences" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.findDuplicateCode">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">findDuplicateCode</code><span class="sig-paren">(</span><em>source_files</em>, <em>report</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#findDuplicateCode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.findDuplicateCode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.findHugeSequences">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">findHugeSequences</code><span class="sig-paren">(</span><em>statement_sequences</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#findHugeSequences"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.findHugeSequences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return candidate clones which cover at least <cite>arguments.size_threshold</cite> lines</p>
+<p>Use a suffixTree to find candidate clones.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>statement_sequences</strong> (<em>List</em><em>[</em><a class="reference internal" href="#clonedigger.abstract_syntax_tree.PairSequences" title="clonedigger.abstract_syntax_tree.PairSequences"><em>PairSequences</em></a><em>]</em>) – Candidate StatetementSequences</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.print_statistics">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">print_statistics</code><span class="sig-paren">(</span><em>sequences_lengths</em>, <em>statement_count</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#print_statistics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.print_statistics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.refineDuplicates">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">refineDuplicates</code><span class="sig-paren">(</span><em>pairs_sequences</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#refineDuplicates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.refineDuplicates" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clone_detection_algorithm.remove_dominated_clones">
+<code class="descclassname">clonedigger.clone_detection_algorithm.</code><code class="descname">remove_dominated_clones</code><span class="sig-paren">(</span><em>clones</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clone_detection_algorithm.html#remove_dominated_clones"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clone_detection_algorithm.remove_dominated_clones" title="Permalink to this definition">¶</a></dt>
+<dd><p>[summary]</p>
+<p>[description]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>clones</strong> (<em>List</em><em>[</em><em>PairSequence</em><em>]</em>) – [description]</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">[description]</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{List[PairSequence]}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-clonedigger.clonedigger">
+<span id="clonedigger-clonedigger-module"></span><h2>clonedigger.clonedigger module<a class="headerlink" href="#module-clonedigger.clonedigger" title="Permalink to this headline">¶</a></h2>
+<p>clonedigger module</p>
+<dl class="function">
+<dt id="clonedigger.clonedigger.cli_arguments">
+<code class="descclassname">clonedigger.clonedigger.</code><code class="descname">cli_arguments</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clonedigger.html#cli_arguments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clonedigger.cli_arguments" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clonedigger.main">
+<code class="descclassname">clonedigger.clonedigger.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clonedigger.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clonedigger.main" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.clonedigger.parse_file">
+<code class="descclassname">clonedigger.clonedigger.</code><code class="descname">parse_file</code><span class="sig-paren">(</span><em>file_name</em>, <em>func_prefixes</em>, <em>report</em>, <em>lang</em>, <em>supplier</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/clonedigger.html#parse_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.clonedigger.parse_file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-clonedigger.python_compiler">
+<span id="clonedigger-python-compiler-module"></span><h2>clonedigger.python_compiler module<a class="headerlink" href="#module-clonedigger.python_compiler" title="Permalink to this headline">¶</a></h2>
+<p>python_compiler module</p>
+<dl class="class">
+<dt id="clonedigger.python_compiler.PythonCompilerSourceFile">
+<em class="property">class </em><code class="descclassname">clonedigger.python_compiler.</code><code class="descname">PythonCompilerSourceFile</code><span class="sig-paren">(</span><em>file_name</em>, <em>func_prefixes=()</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/python_compiler.html#PythonCompilerSourceFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.python_compiler.PythonCompilerSourceFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#clonedigger.abstract_syntax_tree.SourceFile" title="clonedigger.abstract_syntax_tree.SourceFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">clonedigger.abstract_syntax_tree.SourceFile</span></code></a></p>
+<dl class="method">
+<dt id="clonedigger.python_compiler.PythonCompilerSourceFile._setTree">
+<code class="descname">_setTree</code><span class="sig-paren">(</span><em>tree</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.python_compiler.PythonCompilerSourceFile._setTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.python_compiler.PythonCompilerSourceFile.distance_threshold">
+<code class="descname">distance_threshold</code><em class="property"> = 5</em><a class="headerlink" href="#clonedigger.python_compiler.PythonCompilerSourceFile.distance_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.python_compiler.PythonCompilerSourceFile.extension">
+<code class="descname">extension</code><em class="property"> = 'py'</em><a class="headerlink" href="#clonedigger.python_compiler.PythonCompilerSourceFile.extension" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.python_compiler.PythonCompilerSourceFile.getFileName">
+<code class="descname">getFileName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.python_compiler.PythonCompilerSourceFile.getFileName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.python_compiler.PythonCompilerSourceFile.getSourceLine">
+<code class="descname">getSourceLine</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.python_compiler.PythonCompilerSourceFile.getSourceLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return n-th line of the file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>int</em>) – Line number</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">n-th line of self._file_name</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{str}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.python_compiler.PythonCompilerSourceFile.getTree">
+<code class="descname">getTree</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.python_compiler.PythonCompilerSourceFile.getTree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.python_compiler.PythonCompilerSourceFile.ignored_statements">
+<code class="descname">ignored_statements</code><em class="property"> = ['Import', 'From']</em><a class="headerlink" href="#clonedigger.python_compiler.PythonCompilerSourceFile.ignored_statements" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.python_compiler.PythonCompilerSourceFile.rec_build_tree">
+<code class="descname">rec_build_tree</code><span class="sig-paren">(</span><em>node</em>, <em>is_statement=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/python_compiler.html#PythonCompilerSourceFile.rec_build_tree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.python_compiler.PythonCompilerSourceFile.rec_build_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build an AST from a compiler.ast.Node</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>node</strong> (<em>Union</em><em>[</em><em>None</em><em>, </em><em>compiler.ast.Node</em><em>]</em>) – Compiler node to build the AST from.</li>
+<li><strong>is_statement</strong> (<em>bool</em><em>, </em><em>optional</em>) – Direct childs of a ‘Stmt’ node are statements, defaults to False</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">An AST representing the file.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">{AbstractSyntaxTree}</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.python_compiler.PythonCompilerSourceFile.size_threshold">
+<code class="descname">size_threshold</code><em class="property"> = 5</em><a class="headerlink" href="#clonedigger.python_compiler.PythonCompilerSourceFile.size_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.python_compiler.PythonNodeLeaf">
+<em class="property">class </em><code class="descclassname">clonedigger.python_compiler.</code><code class="descname">PythonNodeLeaf</code><span class="sig-paren">(</span><em>val</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/python_compiler.html#PythonNodeLeaf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.python_compiler.PythonNodeLeaf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store variable identifiers or numbers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>_val</strong> (<em>str</em>) – Variable, number identifiers</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="clonedigger.python_compiler.PythonNodeLeaf.as_string">
+<code class="descname">as_string</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/python_compiler.html#PythonNodeLeaf.as_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.python_compiler.PythonNodeLeaf.as_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.python_compiler.PythonNodeLeaf.getVal">
+<code class="descname">getVal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/python_compiler.html#PythonNodeLeaf.getVal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.python_compiler.PythonNodeLeaf.getVal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.python_compiler.add_childs">
+<code class="descclassname">clonedigger.python_compiler.</code><code class="descname">add_childs</code><span class="sig-paren">(</span><em>childs</em>, <em>r</em>, <em>is_statement</em>, <em>source_file</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/python_compiler.html#add_childs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.python_compiler.add_childs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.python_compiler.add_leaf_child">
+<code class="descclassname">clonedigger.python_compiler.</code><code class="descname">add_leaf_child</code><span class="sig-paren">(</span><em>child</em>, <em>name</em>, <em>r</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/python_compiler.html#add_leaf_child"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.python_compiler.add_leaf_child" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.python_compiler.add_leaf_childs">
+<code class="descclassname">clonedigger.python_compiler.</code><code class="descname">add_leaf_childs</code><span class="sig-paren">(</span><em>childs</em>, <em>name</em>, <em>r</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/python_compiler.html#add_leaf_childs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.python_compiler.add_leaf_childs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.python_compiler.add_leaf_string_childs">
+<code class="descclassname">clonedigger.python_compiler.</code><code class="descname">add_leaf_string_childs</code><span class="sig-paren">(</span><em>childs</em>, <em>r</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/python_compiler.html#add_leaf_string_childs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.python_compiler.add_leaf_string_childs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.python_compiler.flatten">
+<code class="descclassname">clonedigger.python_compiler.</code><code class="descname">flatten</code><span class="sig-paren">(</span><em>lst</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/python_compiler.html#flatten"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.python_compiler.flatten" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recursively flatten a list</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>lst</strong> (<em>iterable</em>) – An iterable which can contain other iterables</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A flattened list without iterables</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">{List}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-clonedigger.reports">
+<span id="clonedigger-reports-module"></span><h2>clonedigger.reports module<a class="headerlink" href="#module-clonedigger.reports" title="Permalink to this headline">¶</a></h2>
+<p>reports module</p>
+<dl class="class">
+<dt id="clonedigger.reports.CPDXMLReport">
+<em class="property">class </em><code class="descclassname">clonedigger.reports.</code><code class="descname">CPDXMLReport</code><a class="reference internal" href="../_modules/clonedigger/reports.html#CPDXMLReport"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.CPDXMLReport" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#clonedigger.reports.Report" title="clonedigger.reports.Report"><code class="xref py py-class docutils literal notranslate"><span class="pre">clonedigger.reports.Report</span></code></a></p>
+<dl class="method">
+<dt id="clonedigger.reports.CPDXMLReport.addClone">
+<code class="descname">addClone</code><span class="sig-paren">(</span><em>clone</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.CPDXMLReport.addClone" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.CPDXMLReport.addErrorInformation">
+<code class="descname">addErrorInformation</code><span class="sig-paren">(</span><em>error_info</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.CPDXMLReport.addErrorInformation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.CPDXMLReport.addFileName">
+<code class="descname">addFileName</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.CPDXMLReport.addFileName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.CPDXMLReport.getTimerValues">
+<code class="descname">getTimerValues</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.CPDXMLReport.getTimerValues" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.CPDXMLReport.getTotalTime">
+<code class="descname">getTotalTime</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.CPDXMLReport.getTotalTime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.CPDXMLReport.setMarkToStatementHash">
+<code class="descname">setMarkToStatementHash</code><span class="sig-paren">(</span><em>mark_to_statement_hash</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#CPDXMLReport.setMarkToStatementHash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.CPDXMLReport.setMarkToStatementHash" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.CPDXMLReport.sortByCloneSize">
+<code class="descname">sortByCloneSize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.CPDXMLReport.sortByCloneSize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.CPDXMLReport.startTimer">
+<code class="descname">startTimer</code><span class="sig-paren">(</span><em>descr</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.CPDXMLReport.startTimer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.CPDXMLReport.stopTimer">
+<code class="descname">stopTimer</code><span class="sig-paren">(</span><em>descr=''</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.CPDXMLReport.stopTimer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.CPDXMLReport.writeReport">
+<code class="descname">writeReport</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#CPDXMLReport.writeReport"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.CPDXMLReport.writeReport" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.reports.HTMLReport">
+<em class="property">class </em><code class="descclassname">clonedigger.reports.</code><code class="descname">HTMLReport</code><a class="reference internal" href="../_modules/clonedigger/reports.html#HTMLReport"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.HTMLReport" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#clonedigger.reports.Report" title="clonedigger.reports.Report"><code class="xref py py-class docutils literal notranslate"><span class="pre">clonedigger.reports.Report</span></code></a></p>
+<dl class="method">
+<dt id="clonedigger.reports.HTMLReport.addClone">
+<code class="descname">addClone</code><span class="sig-paren">(</span><em>clone</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.HTMLReport.addClone" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.HTMLReport.addErrorInformation">
+<code class="descname">addErrorInformation</code><span class="sig-paren">(</span><em>error_info</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.HTMLReport.addErrorInformation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.HTMLReport.addFileName">
+<code class="descname">addFileName</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.HTMLReport.addFileName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.HTMLReport.getTimerValues">
+<code class="descname">getTimerValues</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.HTMLReport.getTimerValues" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.HTMLReport.getTotalTime">
+<code class="descname">getTotalTime</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.HTMLReport.getTotalTime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.HTMLReport.setMarkToStatementHash">
+<code class="descname">setMarkToStatementHash</code><span class="sig-paren">(</span><em>mark_to_statement_hash</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#HTMLReport.setMarkToStatementHash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.HTMLReport.setMarkToStatementHash" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.HTMLReport.sortByCloneSize">
+<code class="descname">sortByCloneSize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.HTMLReport.sortByCloneSize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.HTMLReport.startTimer">
+<code class="descname">startTimer</code><span class="sig-paren">(</span><em>descr</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.HTMLReport.startTimer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.HTMLReport.stopTimer">
+<code class="descname">stopTimer</code><span class="sig-paren">(</span><em>descr=''</em><span class="sig-paren">)</span><a class="headerlink" href="#clonedigger.reports.HTMLReport.stopTimer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="clonedigger.reports.HTMLReport.very_strange_const">
+<code class="descname">very_strange_const</code><em class="property"> = 'VERY_STRANGE_CONST'</em><a class="headerlink" href="#clonedigger.reports.HTMLReport.very_strange_const" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.HTMLReport.writeReport">
+<code class="descname">writeReport</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#HTMLReport.writeReport"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.HTMLReport.writeReport" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.reports.NewAsString">
+<em class="property">class </em><code class="descclassname">clonedigger.reports.</code><code class="descname">NewAsString</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#NewAsString"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.NewAsString" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.reports.Report">
+<em class="property">class </em><code class="descclassname">clonedigger.reports.</code><code class="descname">Report</code><a class="reference internal" href="../_modules/clonedigger/reports.html#Report"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.Report" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="clonedigger.reports.Report.addClone">
+<code class="descname">addClone</code><span class="sig-paren">(</span><em>clone</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#Report.addClone"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.Report.addClone" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.Report.addErrorInformation">
+<code class="descname">addErrorInformation</code><span class="sig-paren">(</span><em>error_info</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#Report.addErrorInformation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.Report.addErrorInformation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.Report.addFileName">
+<code class="descname">addFileName</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#Report.addFileName"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.Report.addFileName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.Report.getTimerValues">
+<code class="descname">getTimerValues</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#Report.getTimerValues"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.Report.getTimerValues" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.Report.getTotalTime">
+<code class="descname">getTotalTime</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#Report.getTotalTime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.Report.getTotalTime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.Report.sortByCloneSize">
+<code class="descname">sortByCloneSize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#Report.sortByCloneSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.Report.sortByCloneSize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.Report.startTimer">
+<code class="descname">startTimer</code><span class="sig-paren">(</span><em>descr</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#Report.startTimer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.Report.startTimer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.reports.Report.stopTimer">
+<code class="descname">stopTimer</code><span class="sig-paren">(</span><em>descr=''</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#Report.stopTimer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.Report.stopTimer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.reports.diff_highlight">
+<code class="descclassname">clonedigger.reports.</code><code class="descname">diff_highlight</code><span class="sig-paren">(</span><em>seqs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#diff_highlight"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.diff_highlight" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.reports.format_line_code">
+<code class="descclassname">clonedigger.reports.</code><code class="descname">format_line_code</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#format_line_code"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.format_line_code" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.reports.highlight">
+<code class="descclassname">clonedigger.reports.</code><code class="descname">highlight</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#highlight"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.highlight" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.reports.rec_correct_as_string">
+<code class="descclassname">clonedigger.reports.</code><code class="descname">rec_correct_as_string</code><span class="sig-paren">(</span><em>t1</em>, <em>t2</em>, <em>s1</em>, <em>s2</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#rec_correct_as_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.rec_correct_as_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.reports.set_as_string_node_parent">
+<code class="descclassname">clonedigger.reports.</code><code class="descname">set_as_string_node_parent</code><span class="sig-paren">(</span><em>t</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#set_as_string_node_parent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.set_as_string_node_parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="clonedigger.reports.use_diff">
+<code class="descclassname">clonedigger.reports.</code><code class="descname">use_diff</code><span class="sig-paren">(</span><em>statements</em>, <em>indentations</em>, <em>source_lines</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/reports.html#use_diff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.reports.use_diff" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-clonedigger.suffix_tree">
+<span id="clonedigger-suffix-tree-module"></span><h2>clonedigger.suffix_tree module<a class="headerlink" href="#module-clonedigger.suffix_tree" title="Permalink to this headline">¶</a></h2>
+<p>suffix_tree module</p>
+<dl class="class">
+<dt id="clonedigger.suffix_tree.SuffixTree">
+<em class="property">class </em><code class="descclassname">clonedigger.suffix_tree.</code><code class="descname">SuffixTree</code><span class="sig-paren">(</span><em>f_code=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/suffix_tree.html#SuffixTree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.suffix_tree.SuffixTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Data structure that holds suffixes of iterables</p>
+<p>Exemple:
+t = SuffixTree()
+t.add(‘banana’)</p>
+<div class="line-block">
+<div class="line">(r (a (na (na)),</div>
+<div class="line-block">
+<div class="line">banana,</div>
+<div class="line">na (na)))</div>
+</div>
+</div>
+<p>t.add(‘ananas’)</p>
+<div class="line-block">
+<div class="line">(r (a (s,</div>
+<div class="line-block">
+<div class="line-block">
+<div class="line">na (s,</div>
+<div class="line-block">
+<div class="line">na (s))),</div>
+</div>
+</div>
+<div class="line">banana,</div>
+<div class="line">na (s,</div>
+<div class="line-block">
+<div class="line">na (s)),</div>
+</div>
+<div class="line">s))</div>
+</div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>_node</strong> (<a class="reference internal" href="#clonedigger.suffix_tree.SuffixTree.SuffixTreeNode" title="clonedigger.suffix_tree.SuffixTree.SuffixTreeNode"><em>SuffixTreeNode</em></a>) – Root node of the suffix tree</li>
+<li><strong>_f_code</strong> (<em>Function</em><em>[</em><em>E</em><em>, </em><em>K</em><em>]</em><em>, </em><em>optional</em>) – Function acting as key to add elements in SuffixTree, defaults to identity</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="class">
+<dt id="clonedigger.suffix_tree.SuffixTree.StringPosition">
+<em class="property">class </em><code class="descname">StringPosition</code><span class="sig-paren">(</span><em>string</em>, <em>position</em>, <em>prevelem</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/suffix_tree.html#SuffixTree.StringPosition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.suffix_tree.SuffixTree.StringPosition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Holds a position in a string</p>
+<p>:todo what is it morally used for</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> (<em>Iterable</em><em>[</em><em>E</em><em>]</em>) – Original string of the suffix</li>
+<li><strong>position</strong> (<em>int</em>) – Beginning position of the suffix in the original string</li>
+<li><strong>prevelem</strong> (<em>Union</em><em>[</em><em>K</em><em>, </em><em>None</em><em>]</em>) – Is this the first element of the string</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="clonedigger.suffix_tree.SuffixTree.SuffixTreeNode">
+<em class="property">class </em><code class="descname">SuffixTreeNode</code><a class="reference internal" href="../_modules/clonedigger/suffix_tree.html#SuffixTree.SuffixTreeNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.suffix_tree.SuffixTree.SuffixTreeNode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A node of a suffix tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>childs</strong> (<em>Dict</em><em>[</em><em>K -&gt; E</em><em>]</em>) – Child nodes</li>
+<li><strong>string_positions</strong> (<em>List</em><em>[</em><a class="reference internal" href="#clonedigger.suffix_tree.SuffixTree.StringPosition" title="clonedigger.suffix_tree.SuffixTree.StringPosition"><em>StringPosition</em></a><em>]</em>) – Information about the strings that uses this node</li>
+<li><strong>ending_strings</strong> (<em>List</em><em>[</em><a class="reference internal" href="#clonedigger.suffix_tree.SuffixTree.StringPosition" title="clonedigger.suffix_tree.SuffixTree.StringPosition"><em>StringPosition</em></a><em>]</em>) – Information about the strings that end in this node</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.suffix_tree.SuffixTree._add">
+<code class="descname">_add</code><span class="sig-paren">(</span><em>string</em>, <em>prevelem</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/suffix_tree.html#SuffixTree._add"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.suffix_tree.SuffixTree._add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a suffix to the tree</p>
+<p>[description]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>string</strong> (<em>Iterable</em><em>[</em><em>E</em><em>]</em>) – Suffix to add to tree</li>
+<li><strong>prevelem</strong> (<em>K</em>) – Key of previous element</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.suffix_tree.SuffixTree.add">
+<code class="descname">add</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/suffix_tree.html#SuffixTree.add"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.suffix_tree.SuffixTree.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add all suffixes of string in the tree</p>
+<p>[description]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>string</strong> (<em>Iterable</em><em>[</em><em>E</em><em>]</em>) – String to add</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="clonedigger.suffix_tree.SuffixTree.getBestMaxSubstrings">
+<code class="descname">getBestMaxSubstrings</code><span class="sig-paren">(</span><em>threshold</em>, <em>f=None</em>, <em>f_elem=None</em>, <em>node=None</em>, <em>initial_threshold=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/clonedigger/suffix_tree.html#SuffixTree.getBestMaxSubstrings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#clonedigger.suffix_tree.SuffixTree.getBestMaxSubstrings" title="Permalink to this definition">¶</a></dt>
+<dd><p>[summary]</p>
+<p>[description]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>threshold</strong> (<em>int</em>) – Used to know when to start adding candidate</li>
+<li><strong>f</strong> (<em>Function</em><em>[</em><em>K -&gt; int</em><em>]</em><em>, </em><em>optional</em>) – Used to lower the threshold when visiting a children, defaults to None</li>
+<li><strong>f_elem</strong> (<em>Function</em><em>[</em><em>List</em><em>[</em><em>E</em><em>] </em><em>-&gt; int</em><em>]</em><em>, </em><em>optional</em>) – Used to validate candidate according to initial_threshold, defaults to None</li>
+<li><strong>node</strong> (<a class="reference internal" href="#clonedigger.suffix_tree.SuffixTree.SuffixTreeNode" title="clonedigger.suffix_tree.SuffixTree.SuffixTreeNode"><em>SuffixTreeNode</em></a><em>, </em><em>optional</em>) – Node to use as root, defaults to None</li>
+<li><strong>initial_threshold</strong> (<em>[</em><em>type</em><em>]</em><em>, </em><em>optional</em>) – Leave empty, keep original threshold in recursive calls, defaults to None</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">List of candidate clones</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">{List[Tuple[List[E], List[E]]]}</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-clonedigger">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-clonedigger" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Clone Digger</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">clonedigger</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">clonedigger package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">clonedigger</a><ul>
+      <li>Previous: <a href="modules.html" title="previous chapter">clonedigger</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, peter_bulychev, jlachowski.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/api/clonedigger.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,420 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>clonedigger.anti_unification &#8212; Clone Digger  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for clonedigger.anti_unification</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1">#    Copyright 2008 Peter Bulychev</span>
+<span class="c1">#</span>
+<span class="c1">#    This file is part of Clone Digger.</span>
+<span class="c1">#</span>
+<span class="c1">#    Clone Digger is free software: you can redistribute it and/or modify</span>
+<span class="c1">#    it under the terms of the GNU General Public License as published by</span>
+<span class="c1">#    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1">#    (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1">#    Clone Digger is distributed in the hope that it will be useful,</span>
+<span class="c1">#    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1">#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c1">#    GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1">#   You should have received a copy of the GNU General Public License</span>
+<span class="c1">#   along with Clone Digger.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot;anti_unification module&quot;&quot;&quot;</span>
+
+<span class="sd">&quot;&quot;&quot;from __future__ import absolute_import</span>
+<span class="sd">from __future__ import unicode_literals</span>
+<span class="sd">from __future__ import print_function</span>
+<span class="sd">from __future__ import division</span>
+<span class="sd">from future import standard_library</span>
+<span class="sd">standard_library.install_aliases()</span>
+<span class="sd">from builtins import str</span>
+<span class="sd">from builtins import range</span>
+<span class="sd">from builtins import *</span>
+<span class="sd">from builtins import object&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+
+<span class="kn">from</span> <span class="nn">.abstract_syntax_tree</span> <span class="kn">import</span> <span class="n">AbstractSyntaxTree</span><span class="p">,</span> <span class="n">free_variable_cost</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">arguments</span>
+
+<span class="c1"># NOTE that everywhere is written Unifier instead of AntiUnifier, for simplicity</span>
+
+
+<div class="viewcode-block" id="FreeVariable"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.FreeVariable">[docs]</a><span class="k">class</span> <span class="nc">FreeVariable</span><span class="p">(</span><span class="n">AbstractSyntaxTree</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;AST node used as placeholder for anti-unifiyng.&quot;&quot;&quot;</span>
+
+    <span class="n">free_variables_count</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1">#: Count instanciation of this object</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;VAR(</span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">FreeVariable</span><span class="o">.</span><span class="n">free_variables_count</span><span class="p">)</span>
+        <span class="n">FreeVariable</span><span class="o">.</span><span class="n">free_variables_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">AbstractSyntaxTree</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Substitution"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Substitution">[docs]</a><span class="k">class</span> <span class="nc">Substitution</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A Dict[AbstractSyntaxTree, AbstractSyntaxTree] that replace recursively a</span>
+<span class="sd">    tree by another.</span>
+
+<span class="sd">    TODO: This could extend dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_value</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">initial_value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">initial_value</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_map</span> <span class="o">=</span> <span class="n">initial_value</span>
+
+<div class="viewcode-block" id="Substitution.substitute"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Substitution.substitute">[docs]</a>    <span class="k">def</span> <span class="nf">substitute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">,</span> <span class="n">without_copying</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Recursively replace trees by substitution.</span>
+
+<span class="sd">        :param tree: Tree to be substituted.</span>
+<span class="sd">        :type tree: AbstractSyntaxTree</span>
+<span class="sd">        :param without_copying: Return tree pointers, defaults to False</span>
+<span class="sd">        :type without_copying: bool, optional</span>
+<span class="sd">        :returns: Substituated tree</span>
+<span class="sd">        :rtype: {AbstractSyntaxTree}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">tree</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="p">[</span><span class="n">tree</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">FreeVariable</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">tree</span>
+            <span class="k">if</span> <span class="n">without_copying</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">tree</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">r</span> <span class="o">=</span> <span class="n">AbstractSyntaxTree</span><span class="p">(</span><span class="n">tree</span><span class="o">.</span><span class="n">getName</span><span class="p">())</span>
+                <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">tree</span><span class="o">.</span><span class="n">getChilds</span><span class="p">():</span>
+                    <span class="n">r</span><span class="o">.</span><span class="n">addChild</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">substitute</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">without_copying</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="Substitution.getMap"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Substitution.getMap">[docs]</a>    <span class="k">def</span> <span class="nf">getMap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span></div>
+
+<div class="viewcode-block" id="Substitution.getSize"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Substitution.getSize">[docs]</a>    <span class="k">def</span> <span class="nf">getSize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute size of a substitution.</span>
+
+<span class="sd">        It is the sum of the size of the trees in substitution.</span>
+
+<span class="sd">        :returns: Size of substitution.</span>
+<span class="sd">        :rtype: {float}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">tree</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMap</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="c1"># TODO: Why  `- free_variable_cost` ?</span>
+            <span class="n">ret</span> <span class="o">+=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getSize</span><span class="p">(</span><span class="n">ignore_none</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-</span> <span class="n">free_variable_cost</span>
+        <span class="k">return</span> <span class="n">ret</span></div></div>
+
+
+<div class="viewcode-block" id="Unifier"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Unifier">[docs]</a><span class="k">class</span> <span class="nc">Unifier</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An anti-unifier is a tree that generalize other trees (2) using placeholder.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        Tree 1:       `Add (Name (i), Name (j))`</span>
+<span class="sd">        Tree 2:       `Add (Name (n), Const (1))`</span>
+<span class="sd">        Anti-unifier: `Add (Name (?1 ), ?2 )`</span>
+
+<span class="sd">    Used in:</span>
+<span class="sd">        - abstract_syntax_tree.PairSequences: used to compute distance between 2 trees</span>
+<span class="sd">        - anti_unification.Cluster: used to add trees to cluster</span>
+<span class="sd">        - report.Report: to know if there is a substitution between two code fragment and display them red or cyan</span>
+
+<span class="sd">    From (Bulychev et al., 2008) II. A.:</span>
+<span class="sd">    As the name suggests, given two terms, it produces a more general one that</span>
+<span class="sd">    covers both rather than a more specific one as in unification. Let E1 and E2 be</span>
+<span class="sd">    two terms. Term E is a generalization of E1 and E2 if there exist two</span>
+<span class="sd">    substitutions σ1 and σ2 such that σ1(E) = E1 and σ2(E) = E2. The most specific</span>
+<span class="sd">    generalization of E1 and E2 is called anti-unifier. The process of finding an</span>
+<span class="sd">    anti-unifier is called anti-unification.</span>
+<span class="sd">    [...]</span>
+<span class="sd">    The anti-unifier tree of two trees T1 and T2 is obtained by replacing some</span>
+<span class="sd">    subtrees in T1 and T2 by special nodes, containing term placeholders which are</span>
+<span class="sd">    marked with integers. We will represent such nodes as ?n. For example, the</span>
+<span class="sd">    anti-unifier of `Add (Name (i), Name (j))` and `Add (Name (n), Const (1))` will</span>
+<span class="sd">    be `Add (Name (?1 ), ?2 )`.</span>
+<span class="sd">    In some abstract syntax tree representations occurrences of the same variable</span>
+<span class="sd">    refer to the same leaf in a tree. In this case the anti-unifier of</span>
+<span class="sd">    `Add(Name(i),Name(i))` and `Add(Name(j),Name(j))` will be `Add(Name(?1),Name(?1))`.</span>
+
+<span class="sd">    :param t1: Tree 1</span>
+<span class="sd">    :type t1: AbstractSyntaxTree</span>
+<span class="sd">    :param t2: Tree 2</span>
+<span class="sd">    :type t2: AbstractSyntaxTree</span>
+<span class="sd">    :param ignore_parametrization: todo:</span>
+<span class="sd">    :type ignore_parametrization: bool, optional</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span> <span class="n">t2</span><span class="p">,</span> <span class="n">ignore_parametrization</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_unifier</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_substitutions</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unify</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="n">t2</span><span class="p">,</span> <span class="n">ignore_parametrization</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_unifier</span><span class="o">.</span><span class="n">storeSize</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_substitutions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_substitutions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">storeSize</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Unifier.getSubstitutions"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Unifier.getSubstitutions">[docs]</a>    <span class="k">def</span> <span class="nf">getSubstitutions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_substitutions</span></div>
+
+<div class="viewcode-block" id="Unifier.getUnifier"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Unifier.getUnifier">[docs]</a>    <span class="k">def</span> <span class="nf">getUnifier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unifier</span></div>
+
+<div class="viewcode-block" id="Unifier.getSize"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Unifier.getSize">[docs]</a>    <span class="k">def</span> <span class="nf">getSize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">getSize</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getSubstitutions</span><span class="p">()])</span></div>
+
+<div class="viewcode-block" id="Unifier._combineSubs"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Unifier._combineSubs">[docs]</a>    <span class="k">def</span> <span class="nf">_combineSubs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">ignore_parametrization</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Aggregate substitutions.</span>
+
+<span class="sd">        Given an anti-unifier and two substitutions,</span>
+<span class="sd">        modify node by replacing trees if the substittion are the same.</span>
+<span class="sd">        If ignore_parametrization is True, this function morally performs `t.update(s)`.</span>
+<span class="sd">        Else: some keys are not updated, but they will modify the `node`.</span>
+
+<span class="sd">        :param node: anti-unifier</span>
+<span class="sd">        :type node: AbstractSyntaxTree</span>
+<span class="sd">        :param s: A substitution to use as update</span>
+<span class="sd">        :type s: Tuple[Substitution,Substitution]]</span>
+<span class="sd">        :param t: A substitution to update</span>
+<span class="sd">        :type t: Tuple[Substitution,Substitution]]</span>
+<span class="sd">        :param ignore_parametrization: TODO:, defaults to False</span>
+<span class="sd">        :type ignore_parametrization: bool, optional</span>
+<span class="sd">        :returns: an updated unifier</span>
+<span class="sd">        :rtype: {Tuple[AbstractSyntaxTree, Tuple[Substitution,Substitution]]}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># s and t are 2-tuples</span>
+        <span class="k">assert</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">==</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">==</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">newt</span> <span class="o">=</span> <span class="p">(</span><span class="n">copy</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">copy</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">relabel</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">si</span> <span class="ow">in</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ignore_parametrization</span><span class="p">:</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">for</span> <span class="n">ti</span> <span class="ow">in</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">():</span>
+                    <span class="c1"># For two trees the same substitution is performed</span>
+                    <span class="c1"># This is a pattern of substitution??</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()[</span><span class="n">si</span><span class="p">]</span> <span class="o">==</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()[</span><span class="n">ti</span><span class="p">])</span> <span class="ow">and</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()[</span><span class="n">si</span><span class="p">]</span> <span class="o">==</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()[</span><span class="n">ti</span><span class="p">]):</span>
+                        <span class="c1"># if s[si] == t[ti]  # the values of substitution is the same</span>
+                        <span class="n">relabel</span><span class="p">[</span><span class="n">si</span><span class="p">]</span> <span class="o">=</span> <span class="n">ti</span>
+                        <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="k">break</span>
+            <span class="k">if</span> <span class="n">ignore_parametrization</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+                <span class="c1"># Add s[si] to t</span>
+                <span class="n">newt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()[</span><span class="n">si</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()[</span><span class="n">si</span><span class="p">]</span>
+                <span class="n">newt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()[</span><span class="n">si</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getMap</span><span class="p">()[</span><span class="n">si</span><span class="p">]</span>
+
+        <span class="n">mod_node</span> <span class="o">=</span> <span class="n">Substitution</span><span class="p">(</span><span class="n">relabel</span><span class="p">)</span><span class="o">.</span><span class="n">substitute</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">mod_node</span><span class="p">,</span> <span class="n">newt</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Unifier._unify"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Unifier._unify">[docs]</a>    <span class="k">def</span> <span class="nf">_unify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">,</span> <span class="n">ignore_parametrization</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create anti-unifier for node1 and node2.</span>
+
+<span class="sd">        Recursively create an anti-unifier using substitutions.</span>
+
+<span class="sd">        :param node1: Tree to be anti-unified</span>
+<span class="sd">        :type node1: AbstractSyntaxTree</span>
+<span class="sd">        :param node2: Tree to be anti-unified</span>
+<span class="sd">        :type node2: AbstractSyntaxTree</span>
+<span class="sd">        :param ignore_parametrization: todo:</span>
+<span class="sd">        :type ignore_parametrization: bool</span>
+<span class="sd">        :returns: An anti-unifier and the substitutions performed.</span>
+<span class="sd">        :rtype: {Tuple[AbstractSyntaxTree, Tuple[Substitution,Substitution]]}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node1</span> <span class="o">==</span> <span class="n">node2</span><span class="p">:</span>
+            <span class="c1"># Two nodes are the same. From (Bulychev et al., 2008): II. A.</span>
+            <span class="c1"># [...] the abstract syntax trees we use are not always trees, since</span>
+            <span class="c1"># leaves containing the same variable references may be merged, [...]</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">node1</span><span class="p">,</span> <span class="p">(</span><span class="n">Substitution</span><span class="p">(),</span> <span class="n">Substitution</span><span class="p">()))</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="o">!=</span> <span class="n">node2</span><span class="o">.</span><span class="n">getName</span><span class="p">())</span> <span class="ow">or</span> <span class="p">(</span><span class="n">node1</span><span class="o">.</span><span class="n">getChildCount</span><span class="p">()</span> <span class="o">!=</span> <span class="n">node2</span><span class="o">.</span><span class="n">getChildCount</span><span class="p">()):</span>
+            <span class="c1"># Nodes are different, replace node1 and node2 by a Free variable</span>
+            <span class="n">var</span> <span class="o">=</span> <span class="n">FreeVariable</span><span class="p">()</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="p">(</span><span class="n">Substitution</span><span class="p">({</span><span class="n">var</span><span class="p">:</span> <span class="n">node1</span><span class="p">}),</span> <span class="n">Substitution</span><span class="p">({</span><span class="n">var</span><span class="p">:</span> <span class="n">node2</span><span class="p">})))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Same name AND number of childs</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="n">Substitution</span><span class="p">(),</span> <span class="n">Substitution</span><span class="p">())</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span>
+            <span class="n">retNode</span> <span class="o">=</span> <span class="n">AbstractSyntaxTree</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="n">node1</span><span class="o">.</span><span class="n">getChildCount</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">count</span><span class="p">):</span>
+                <span class="c1"># Find anti-unifier for the childs</span>
+                <span class="p">(</span><span class="n">ai</span><span class="p">,</span> <span class="n">si</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unify</span><span class="p">(</span>
+                    <span class="n">node1</span><span class="o">.</span><span class="n">getChilds</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span> <span class="n">node2</span><span class="o">.</span><span class="n">getChilds</span><span class="p">()[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="n">ignore_parametrization</span><span class="p">)</span>
+                <span class="c1"># ai: anti-unifier tree</span>
+                <span class="c1"># si: substitutions from node1 and node2 to ai</span>
+                <span class="p">(</span><span class="n">ai</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_combineSubs</span><span class="p">(</span>
+                    <span class="n">ai</span><span class="p">,</span> <span class="n">si</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">ignore_parametrization</span><span class="p">)</span>
+                <span class="n">retNode</span><span class="o">.</span><span class="n">addChild</span><span class="p">(</span><span class="n">ai</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">retNode</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Cluster"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Cluster">[docs]</a><span class="k">class</span> <span class="nc">Cluster</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a cluster consisting of AbstractSyntaxTree</span>
+
+<span class="sd">    TODO: how it is used</span>
+
+<span class="sd">    :param tree: First element to add, defaults to None</span>
+<span class="sd">    :type tree: AbstractSyntaxTree, optional</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Cluster instanciation counter, used as identifier</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># TODO: this is len(self._trees)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_unifier_tree</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Anti-unifier of trees in cluster, if added via self.unify()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trees</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># List of trees in cluster</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_covered_lines</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Maximum lines covered by a tree in the cluster</span>
+        <span class="k">if</span> <span class="n">tree</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_n</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_trees</span> <span class="o">=</span> <span class="p">[</span><span class="n">tree</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_max_covered_lines</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tree</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">())</span>
+            <span class="c1"># TODO: replace by self.addWithoutUnification(tree)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_unifier_tree</span> <span class="o">=</span> <span class="n">tree</span>
+        <span class="n">Cluster</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cluster_number</span> <span class="o">=</span> <span class="n">Cluster</span><span class="o">.</span><span class="n">count</span>
+
+<div class="viewcode-block" id="Cluster.getMaxCoveredLines"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Cluster.getMaxCoveredLines">[docs]</a>    <span class="k">def</span> <span class="nf">getMaxCoveredLines</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_covered_lines</span></div>
+
+<div class="viewcode-block" id="Cluster.getUnifierSize"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Cluster.getUnifierSize">[docs]</a>    <span class="k">def</span> <span class="nf">getUnifierSize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">getUnifierTree</span><span class="p">()</span><span class="o">.</span><span class="n">getSize</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Cluster.getCount"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Cluster.getCount">[docs]</a>    <span class="k">def</span> <span class="nf">getCount</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n</span></div>
+
+<div class="viewcode-block" id="Cluster.getAddCost"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Cluster.getAddCost">[docs]</a>    <span class="k">def</span> <span class="nf">getAddCost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the cost of adding a tree to the cluster.</span>
+
+<span class="sd">        :param tree: tree</span>
+<span class="sd">        :type tree: AbstractSyntaxTree</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">unifier</span> <span class="o">=</span> <span class="n">Unifier</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getUnifierTree</span><span class="p">(),</span> <span class="n">tree</span><span class="p">)</span>
+        <span class="c1"># TODO: shouldn&#39;t this be count * (sub[0] + sub[1]) ??</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getCount</span><span class="p">()</span> <span class="o">*</span> <span class="n">unifier</span><span class="o">.</span><span class="n">getSubstitutions</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getSize</span><span class="p">()</span> <span class="o">+</span> <span class="n">unifier</span><span class="o">.</span><span class="n">getSubstitutions</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">getSize</span><span class="p">())</span></div>
+
+    <span class="c1"># Set tree</span>
+
+<div class="viewcode-block" id="Cluster.unify"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Cluster.unify">[docs]</a>    <span class="k">def</span> <span class="nf">unify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add tree to cluster by unifying cluster&#39;s unifier with `tree`.</span>
+
+<span class="sd">        :param tree: Tree</span>
+<span class="sd">        :type tree: AbstractSyntaxTree</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO: why isn&#39;t self._max_covered_lines updated here ?</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_unifier_tree</span> <span class="o">=</span> <span class="n">Unifier</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getUnifierTree</span><span class="p">(),</span> <span class="n">tree</span><span class="p">)</span><span class="o">.</span><span class="n">getUnifier</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trees</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tree</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Cluster.addWithoutUnification"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Cluster.addWithoutUnification">[docs]</a>    <span class="k">def</span> <span class="nf">addWithoutUnification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add tree to cluster without updating unifier_tree</span>
+
+<span class="sd">        :param tree: Tree</span>
+<span class="sd">        :type tree: AbstractSyntaxTree</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trees</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tree</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tree</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">())</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_covered_lines</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_max_covered_lines</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tree</span><span class="o">.</span><span class="n">getCoveredLineNumbers</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Cluster.eraseAllTrees"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Cluster.eraseAllTrees">[docs]</a>    <span class="k">def</span> <span class="nf">eraseAllTrees</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trees</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+    <span class="c1"># Get tree</span>
+
+<div class="viewcode-block" id="Cluster.getUnifierTree"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.anti_unification.Cluster.getUnifierTree">[docs]</a>    <span class="k">def</span> <span class="nf">getUnifierTree</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unifier_tree</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Clone Digger</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">clonedigger</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, peter_bulychev, jlachowski.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

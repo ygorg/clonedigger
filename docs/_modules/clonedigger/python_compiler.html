@@ -1,0 +1,339 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>clonedigger.python_compiler &#8212; Clone Digger  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for clonedigger.python_compiler</h1><div class="highlight"><pre>
+<span></span><span class="c1">#    Copyright 2008 Peter Bulychev</span>
+<span class="c1">#    http://clonedigger.sourceforge.net</span>
+<span class="c1">#</span>
+<span class="c1">#    This file is part of Clone Digger.</span>
+<span class="c1">#</span>
+<span class="c1">#    Clone Digger is free software: you can redistribute it and/or modify</span>
+<span class="c1">#    it under the terms of the GNU General Public License as published by</span>
+<span class="c1">#    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1">#    (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1">#    Clone Digger is distributed in the hope that it will be useful,</span>
+<span class="c1">#    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1">#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c1">#    GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1">#   You should have received a copy of the GNU General Public License</span>
+<span class="c1">#   along with Clone Digger.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot;python_compiler module&quot;&quot;&quot;</span>
+
+<span class="sd">&quot;&quot;&quot;from __future__ import absolute_import&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">compiler</span>
+
+<span class="kn">from</span> <span class="nn">.abstract_syntax_tree</span> <span class="kn">import</span> <span class="n">AbstractSyntaxTree</span><span class="p">,</span> <span class="n">SourceFile</span>
+
+
+<span class="c1"># TODO: make this extend AbstractSyntaxTree ? This might impact isinstance(node, PythonNodeLeaf)</span>
+<span class="c1"># How are leaves represented in ANTLRSourceFile if not with a special node ?</span>
+<div class="viewcode-block" id="PythonNodeLeaf"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.python_compiler.PythonNodeLeaf">[docs]</a><span class="k">class</span> <span class="nc">PythonNodeLeaf</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Store variable identifiers or numbers</span>
+
+<span class="sd">    :param _val: Variable, number identifiers</span>
+<span class="sd">    :type _val: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_val</span> <span class="o">=</span> <span class="n">val</span>
+
+<div class="viewcode-block" id="PythonNodeLeaf.getVal"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.python_compiler.PythonNodeLeaf.getVal">[docs]</a>    <span class="k">def</span> <span class="nf">getVal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_val</span></div>
+
+<div class="viewcode-block" id="PythonNodeLeaf.as_string"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.python_compiler.PythonNodeLeaf.as_string">[docs]</a>    <span class="k">def</span> <span class="nf">as_string</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getVal</span><span class="p">())</span></div>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_string</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="flatten"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.python_compiler.flatten">[docs]</a><span class="k">def</span> <span class="nf">flatten</span><span class="p">(</span><span class="n">lst</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Recursively flatten a list</span>
+
+<span class="sd">    :param lst: An iterable which can contain other iterables</span>
+<span class="sd">    :type lst: iterable</span>
+<span class="sd">    :returns: A flattened list without iterables</span>
+<span class="sd">    :rtype: {List}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">elt</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">:</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">elt</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="nb">tuple</span> <span class="ow">or</span> <span class="n">t</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">elt2</span> <span class="ow">in</span> <span class="n">flatten</span><span class="p">(</span><span class="n">elt</span><span class="p">):</span>
+                <span class="n">l</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">elt2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">l</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">elt</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">l</span></div>
+
+
+<span class="c1"># TODO: make these function method of PythonCompilerSourceFile</span>
+<div class="viewcode-block" id="add_childs"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.python_compiler.add_childs">[docs]</a><span class="k">def</span> <span class="nf">add_childs</span><span class="p">(</span><span class="n">childs</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="n">source_file</span><span class="p">):</span>
+    <span class="c1"># Calls rec_build_tree on `childs`</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">childs</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">childs</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">compiler</span><span class="o">.</span><span class="n">ast</span><span class="o">.</span><span class="n">Node</span><span class="p">)</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">source_file</span><span class="o">.</span><span class="n">rec_build_tree</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="ow">in</span> <span class="n">source_file</span><span class="o">.</span><span class="n">ignored_statements</span><span class="p">:</span>
+            <span class="c1"># TODO move it up</span>
+            <span class="k">continue</span>
+        <span class="n">t</span><span class="o">.</span><span class="n">setParent</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">addChild</span><span class="p">(</span><span class="n">t</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="add_leaf_child"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.python_compiler.add_leaf_child">[docs]</a><span class="k">def</span> <span class="nf">add_leaf_child</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">r</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">compiler</span><span class="o">.</span><span class="n">ast</span><span class="o">.</span><span class="n">Node</span><span class="p">)</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">AbstractSyntaxTree</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">child</span><span class="p">))</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">setParent</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">PythonNodeLeaf</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">ast_node</span> <span class="o">=</span> <span class="n">l</span>
+    <span class="n">r</span><span class="o">.</span><span class="n">addChild</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="c1"># How is this different from `a[i] = l`</span>
+    <span class="nb">setattr</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">ast_node</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">t</span></div>
+
+
+<div class="viewcode-block" id="add_leaf_childs"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.python_compiler.add_leaf_childs">[docs]</a><span class="k">def</span> <span class="nf">add_leaf_childs</span><span class="p">(</span><span class="n">childs</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">r</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">childs</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">childs</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">ast_node</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">childs</span><span class="p">)):</span>
+        <span class="n">child</span> <span class="o">=</span> <span class="n">childs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">compiler</span><span class="o">.</span><span class="n">ast</span><span class="o">.</span><span class="n">Node</span><span class="p">)</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">AbstractSyntaxTree</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">child</span><span class="p">))</span>
+        <span class="n">t</span><span class="o">.</span><span class="n">setParent</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+        <span class="n">l</span> <span class="o">=</span> <span class="n">PythonNodeLeaf</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+        <span class="n">t</span><span class="o">.</span><span class="n">ast_node</span> <span class="o">=</span> <span class="n">l</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">addChild</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="c1"># How is this different from `setattr(r.ast_node, name, l)`</span>
+        <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">l</span></div>
+
+
+<div class="viewcode-block" id="add_leaf_string_childs"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.python_compiler.add_leaf_string_childs">[docs]</a><span class="k">def</span> <span class="nf">add_leaf_string_childs</span><span class="p">(</span><span class="n">childs</span><span class="p">,</span> <span class="n">r</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">childs</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">childs</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">compiler</span><span class="o">.</span><span class="n">ast</span><span class="o">.</span><span class="n">Node</span><span class="p">)</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">AbstractSyntaxTree</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">child</span><span class="p">))</span>
+        <span class="c1"># Is this right ? Should it not be t.setParent(r) ?</span>
+        <span class="n">t</span><span class="o">.</span><span class="n">setParent</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">addChild</span><span class="p">(</span><span class="n">t</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PythonCompilerSourceFile"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.python_compiler.PythonCompilerSourceFile">[docs]</a><span class="k">class</span> <span class="nc">PythonCompilerSourceFile</span><span class="p">(</span><span class="n">SourceFile</span><span class="p">):</span>
+    <span class="n">extension</span> <span class="o">=</span> <span class="s1">&#39;py&#39;</span>
+    <span class="n">distance_threshold</span> <span class="o">=</span> <span class="mi">5</span>
+    <span class="n">size_threshold</span> <span class="o">=</span> <span class="mi">5</span>
+    <span class="n">ignored_statements</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Import&#39;</span><span class="p">,</span> <span class="s1">&#39;From&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">func_prefixes</span><span class="o">=</span><span class="p">()):</span>
+        <span class="n">SourceFile</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_func_prefixes</span> <span class="o">=</span> <span class="n">func_prefixes</span>
+
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">compiler</span><span class="o">.</span><span class="n">parseFile</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setTree</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rec_build_tree</span><span class="p">(</span><span class="n">parsed</span><span class="p">))</span>
+
+<div class="viewcode-block" id="PythonCompilerSourceFile.rec_build_tree"><a class="viewcode-back" href="../../api/clonedigger.html#clonedigger.python_compiler.PythonCompilerSourceFile.rec_build_tree">[docs]</a>    <span class="k">def</span> <span class="nf">rec_build_tree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">is_statement</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build an AST from a compiler.ast.Node</span>
+
+<span class="sd">        :param node: Compiler node to build the AST from.</span>
+<span class="sd">        :type node: Union[None, compiler.ast.Node]</span>
+<span class="sd">        :param is_statement: Direct childs of a &#39;Stmt&#39; node are statements, defaults to False</span>
+<span class="sd">        :type is_statement: bool, optional</span>
+<span class="sd">        :returns: An AST representing the file.</span>
+<span class="sd">        :rtype: {AbstractSyntaxTree}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># TODO: how were the `if name == XXX` chosen ?</span>
+        <span class="c1"># The doc is available at : https://docs.python.org/2/library/compiler.html</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">compiler</span><span class="o">.</span><span class="n">ast</span><span class="o">.</span><span class="n">Node</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;Function&#39;</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">prefix</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_func_prefixes</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">prefix</span><span class="p">):</span>
+                        <span class="c1"># skip function that matches pattern</span>
+                        <span class="k">return</span> <span class="n">AbstractSyntaxTree</span><span class="p">(</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;Function&#39;</span><span class="p">,</span> <span class="s1">&#39;Class&#39;</span><span class="p">]:</span>
+                <span class="c1"># ignoring class and function docs</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">doc</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">lineno</span><span class="p">:</span>
+                <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">lineno</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">AbstractSyntaxTree</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">ast_node</span> <span class="o">=</span> <span class="n">node</span>
+            <span class="k">if</span> <span class="n">is_statement</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">lineno</span><span class="p">:</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">markAsStatement</span><span class="p">()</span>
+            <span class="n">is_statement</span> <span class="o">=</span> <span class="p">(</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;Stmt&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;AssAttr&quot;</span><span class="p">:</span>
+                <span class="n">add_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">expr</span><span class="p">],</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+                <span class="n">add_leaf_child</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">attrname</span><span class="p">,</span> <span class="s1">&#39;attrname&#39;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                <span class="n">add_leaf_string_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">flags</span><span class="p">],</span> <span class="n">r</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;AssName&quot;</span><span class="p">:</span>
+                <span class="n">add_leaf_child</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                <span class="c1"># add_leaf_child(node.flags, &#39;flags&#39;, r)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;AugAssign&quot;</span><span class="p">:</span>
+                <span class="n">add_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">node</span><span class="p">],</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+                <span class="n">add_leaf_child</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">op</span><span class="p">,</span> <span class="s1">&#39;op&#39;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                <span class="n">add_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">expr</span><span class="p">],</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Class&quot;</span><span class="p">:</span>
+                <span class="n">add_leaf_child</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                <span class="c1"># print &#39;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&#39;, flatten(node.bases)</span>
+                <span class="n">add_childs</span><span class="p">(</span><span class="n">flatten</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">bases</span><span class="p">),</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+                <span class="c1"># add_leaf_child(node.doc, &#39;doc&#39;, r) we don&#39;t want class docs in our tree, do we?</span>
+                <span class="n">add_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">code</span><span class="p">],</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Compare&quot;</span><span class="p">:</span>
+                <span class="n">add_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">expr</span><span class="p">],</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">ops</span><span class="p">)):</span>
+                    <span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">expr</span><span class="p">)</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">t</span> <span class="o">=</span> <span class="n">add_leaf_child</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="s1">&#39;op&#39;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                    <span class="n">add_childs</span><span class="p">([</span><span class="n">expr</span><span class="p">],</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">ops</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">ast_node</span><span class="p">,</span> <span class="n">expr</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Const&quot;</span><span class="p">:</span>
+                <span class="n">add_leaf_child</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">),</span> <span class="s2">&quot;value&quot;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+            <span class="c1"># elif name == &quot;From&quot;:</span>
+                <span class="c1"># add_leaf_child(node.modname, &quot;modname&quot;, r)</span>
+                <span class="c1"># add_childs(node.names, r, is_statement, self)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Function&quot;</span><span class="p">:</span>
+                <span class="c1"># add_childs(node.decorators, r, is_statement, self)  FIXME do we need that?</span>
+                <span class="n">add_leaf_child</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                <span class="n">add_leaf_childs</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">argnames</span><span class="p">,</span> <span class="s2">&quot;argnames&quot;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">defaults</span> <span class="o">==</span> <span class="p">():</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">defaults</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="c1"># TODO incomment and fix</span>
+                <span class="n">add_childs</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">defaults</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+                <span class="n">add_leaf_string_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">flags</span><span class="p">],</span> <span class="n">r</span><span class="p">)</span>
+                <span class="c1"># add_leaf_child(node.doc, &quot;doc&quot;, r) same as class docs... we don&#39;t need them</span>
+                <span class="n">add_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">code</span><span class="p">],</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Getattr&quot;</span><span class="p">:</span>
+                <span class="n">add_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">expr</span><span class="p">],</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+                <span class="n">add_leaf_child</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">attrname</span><span class="p">,</span> <span class="s2">&quot;attrname&quot;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Global&quot;</span><span class="p">:</span>
+                <span class="n">add_leaf_childs</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">names</span><span class="p">,</span> <span class="s2">&quot;names&quot;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+            <span class="c1"># elif name == &quot;Import&quot;:</span>
+                <span class="c1"># add_leaf_childs(node.names, &quot;names&quot;, r)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Keyword&quot;</span><span class="p">:</span>
+                <span class="n">add_leaf_child</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                <span class="n">add_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">expr</span><span class="p">],</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Lambda&quot;</span><span class="p">:</span>
+                <span class="c1"># TODO: uncomment and fix</span>
+                <span class="n">add_leaf_childs</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">argnames</span><span class="p">,</span> <span class="s2">&quot;argnames&quot;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">defaults</span> <span class="o">==</span> <span class="p">():</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">defaults</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">add_childs</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">defaults</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+                <span class="n">add_childs</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">code</span><span class="p">],</span> <span class="n">r</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Name&quot;</span><span class="p">:</span>
+                <span class="c1"># the most important one :)</span>
+                <span class="n">add_leaf_child</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">getChildren</span><span class="p">():</span>
+                    <span class="n">t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rec_build_tree</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">is_statement</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignored_statements</span><span class="p">:</span>
+                        <span class="k">continue</span>
+                    <span class="n">t</span><span class="o">.</span><span class="n">setParent</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+                    <span class="n">r</span><span class="o">.</span><span class="n">addChild</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">r</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">AbstractSyntaxTree</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">node</span><span class="p">))</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Clone Digger</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">clonedigger</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, peter_bulychev, jlachowski.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
