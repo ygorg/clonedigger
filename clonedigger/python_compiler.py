@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 #    Copyright 2008 Peter Bulychev
 #    http://clonedigger.sourceforge.net
 #
@@ -16,6 +15,8 @@ from __future__ import absolute_import
 #
 #   You should have received a copy of the GNU General Public License
 #   along with Clone Digger.  If not, see <http://www.gnu.org/licenses/>.
+
+"""from __future__ import absolute_import"""
 
 import compiler
 

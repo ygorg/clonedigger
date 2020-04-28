@@ -1,12 +1,3 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-from future import standard_library
-standard_library.install_aliases()
-from builtins import range
-from builtins import *
-from past.utils import old_div
 #    Copyright 2008 Peter Bulychev
 #
 #    This file is part of Clone Digger.
@@ -23,6 +14,18 @@ from past.utils import old_div
 #
 #   You should have received a copy of the GNU General Public License
 #   along with Clone Digger.  If not, see <http://www.gnu.org/licenses/>.
+
+"""from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import *
+from builtins import object
+from past.utils import old_div"""
 
 import sys
 import logging
